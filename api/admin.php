@@ -1,0 +1,596 @@
+<?php
+session_start();
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/session.php';
+
+header('Content-Type: application/json');
+
+// Check if user is admin
+if (!isAdmin()) {
+    echo json_encode(['success' => false, 'message' => 'Access denied. Admin privileges required.']);
+    exit;
+}
+
+$db = new Database();
+$conn = $db->connect();
+
+$action = $_GET['action'] ?? '';
+
+switch ($action) {
+    case 'approve_content':
+        handleApproveContent($conn);
+        break;
+    case 'reject_content':
+        handleRejectContent($conn);
+        break;
+    case 'update_user_role':
+        handleUpdateUserRole($conn);
+        break;
+    case 'update_user_status':
+        handleUpdateUserStatus($conn);
+        break;
+    case 'award_badge':
+        handleAwardBadge($conn);
+        break;
+    case 'remove_badge':
+        handleRemoveBadge($conn);
+        break;
+    case 'delete_event':
+        handleDeleteEvent($conn);
+        break;
+    case 'delete_post':
+        handleDeletePost($conn);
+        break;
+    case 'delete_user':
+        handleDeleteUser($conn);
+        break;
+    case 'send_notification':
+        handleSendNotification($conn);
+        break;
+    case 'get_event_registrations':
+        handleGetEventRegistrations($conn);
+        break;
+    case 'export_registrations':
+        handleExportRegistrations($conn);
+        break;
+
+    case 'create_event':
+        handleCreateEvent($conn);
+        break;
+    default:
+        echo json_encode(['success' => false, 'message' => 'Invalid action']);
+}
+
+function handleApproveContent($conn)
+{
+    $data = json_decode(file_get_contents('php://input'), true);
+    $type = $data['type'] ?? '';
+    $id = $data['id'] ?? 0;
+
+    try {
+        if ($type === 'media') {
+            $stmt = $conn->prepare("UPDATE media_content SET status = 'approved' WHERE id = ?");
+            $stmt->execute([$id]);
+
+            // Get media info and send notification
+            $mediaStmt = $conn->prepare("SELECT mc.*, u.email, u.first_name FROM media_content mc JOIN users u ON mc.user_id = u.id WHERE mc.id = ?");
+            $mediaStmt->execute([$id]);
+            $media = $mediaStmt->fetch();
+
+            if ($media) {
+                require_once __DIR__ . '/../config/mailer.php';
+                $mailer = new Mailer();
+                $mailer->sendNotificationEmail(
+                    $media['email'],
+                    $media['first_name'],
+                    'Your Media Has Been Approved! 🎉',
+                    '<p>Great news! Your submission "<strong>' . htmlspecialchars($media['title']) . '</strong>" has been approved and is now live on Scribes Global.</p>
+                    <p>Thank you for sharing your creative work with the community!</p>',
+                    SITE_URL . '/pages/media',
+                    'View Media'
+                );
+            }
+        } elseif ($type === 'prayer') {
+            $stmt = $conn->prepare("UPDATE prayer_requests SET status = 'approved' WHERE id = ?");
+            $stmt->execute([$id]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid content type']);
+            return;
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Content approved successfully']);
+    } catch (PDOException $e) {
+        error_log("Approve content error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to approve content']);
+    }
+}
+
+function handleRejectContent($conn)
+{
+    $data = json_decode(file_get_contents('php://input'), true);
+    $type = $data['type'] ?? '';
+    $id = $data['id'] ?? 0;
+
+    try {
+        if ($type === 'media') {
+            $stmt = $conn->prepare("UPDATE media_content SET status = 'rejected' WHERE id = ?");
+            $stmt->execute([$id]);
+        } elseif ($type === 'prayer') {
+            $stmt = $conn->prepare("DELETE FROM prayer_requests WHERE id = ?");
+            $stmt->execute([$id]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Invalid content type']);
+            return;
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Content rejected successfully']);
+    } catch (PDOException $e) {
+        error_log("Reject content error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to reject content']);
+    }
+}
+
+function handleUpdateUserRole($conn)
+{
+    $userId = $_POST['user_id'] ?? 0;
+    $role = $_POST['role'] ?? '';
+
+    $validRoles = ['super_admin', 'administrator', 'editor', 'ministry_leader', 'member'];
+
+    if (!in_array($role, $validRoles)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid role']);
+        return;
+    }
+
+    try {
+        $stmt = $conn->prepare("UPDATE users SET role = ? WHERE id = ?");
+        $stmt->execute([$role, $userId]);
+
+        echo json_encode(['success' => true, 'message' => 'User role updated successfully']);
+    } catch (PDOException $e) {
+        error_log("Update user role error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to update user role']);
+    }
+}
+
+function handleUpdateUserStatus($conn)
+{
+    $userId = $_POST['user_id'] ?? 0;
+    $status = $_POST['status'] ?? '';
+
+    $validStatuses = ['active', 'suspended', 'banned'];
+
+    if (!in_array($status, $validStatuses)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid status']);
+        return;
+    }
+
+    try {
+        $stmt = $conn->prepare("UPDATE users SET status = ? WHERE id = ?");
+        $stmt->execute([$status, $userId]);
+
+        echo json_encode(['success' => true, 'message' => 'User status updated successfully']);
+    } catch (PDOException $e) {
+        error_log("Update user status error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to update user status']);
+    }
+}
+
+function handleAwardBadge($conn)
+{
+    $userId = $_POST['user_id'] ?? 0;
+    $badgeType = $_POST['badge_type'] ?? '';
+    $adminId = $_SESSION['user_id'];
+
+    $validBadges = ['verified', 'founder', 'ministry_leader', 'featured', 'certified', 'active'];
+
+    if (!in_array($badgeType, $validBadges)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid badge type']);
+        return;
+    }
+
+    try {
+        // Check if badge already exists
+        $checkStmt = $conn->prepare("SELECT id FROM user_badges WHERE user_id = ? AND badge_type = ?");
+        $checkStmt->execute([$userId, $badgeType]);
+
+        if ($checkStmt->fetch()) {
+            echo json_encode(['success' => false, 'message' => 'User already has this badge']);
+            return;
+        }
+
+        // Award badge
+        $stmt = $conn->prepare("INSERT INTO user_badges (user_id, badge_type, awarded_by, awarded_at) VALUES (?, ?, ?, NOW())");
+        $stmt->execute([$userId, $badgeType, $adminId]);
+
+        // Send notification
+        $userStmt = $conn->prepare("SELECT email, first_name FROM users WHERE id = ?");
+        $userStmt->execute([$userId]);
+        $user = $userStmt->fetch();
+
+        if ($user) {
+            require_once __DIR__ . '/../config/mailer.php';
+            $mailer = new Mailer();
+
+            $badgeNames = [
+                'verified' => 'Verified Artist Badge',
+                'founder' => 'Founder Badge',
+                'ministry_leader' => 'Ministry Leader Badge',
+                'featured' => 'Featured Creator Badge',
+                'certified' => 'Certified Graduate Badge',
+                'active' => 'Active Member Badge'
+            ];
+
+            $mailer->sendNotificationEmail(
+                $user['email'],
+                $user['first_name'],
+                'You\'ve Earned a New Badge! 🏆',
+                '<p>Congratulations! You\'ve been awarded the <strong>' . $badgeNames[$badgeType] . '</strong>.</p>
+                <p>This badge will be displayed on your profile and shows your commitment to the Scribes Global community.</p>',
+                SITE_URL . '/pages/dashboard/profile',
+                'View Your Profile'
+            );
+        }
+
+        echo json_encode(['success' => true, 'message' => 'Badge awarded successfully']);
+    } catch (PDOException $e) {
+        error_log("Award badge error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to award badge']);
+    }
+}
+
+function handleRemoveBadge($conn)
+{
+    $userId = $_POST['user_id'] ?? 0;
+    $badgeType = $_POST['badge_type'] ?? '';
+
+    try {
+        $stmt = $conn->prepare("DELETE FROM user_badges WHERE user_id = ? AND badge_type = ?");
+        $stmt->execute([$userId, $badgeType]);
+
+        echo json_encode(['success' => true, 'message' => 'Badge removed successfully']);
+    } catch (PDOException $e) {
+        error_log("Remove badge error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to remove badge']);
+    }
+}
+
+function handleDeleteEvent($conn)
+{
+    $eventId = $_POST['event_id'] ?? 0;
+
+    try {
+        // Delete registrations first
+        $deleteRegStmt = $conn->prepare("DELETE FROM event_registrations WHERE event_id = ?");
+        $deleteRegStmt->execute([$eventId]);
+
+        // Delete event
+        $deleteStmt = $conn->prepare("DELETE FROM events WHERE id = ?");
+        $deleteStmt->execute([$eventId]);
+
+        echo json_encode(['success' => true, 'message' => 'Event deleted successfully']);
+    } catch (PDOException $e) {
+        error_log("Delete event error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to delete event']);
+    }
+}
+
+function handleDeletePost($conn)
+{
+    $postId = $_POST['post_id'] ?? 0;
+
+    try {
+        // Delete comments first
+        $deleteCommentsStmt = $conn->prepare("DELETE FROM blog_comments WHERE post_id = ?");
+        $deleteCommentsStmt->execute([$postId]);
+
+        // Delete likes
+        $deleteLikesStmt = $conn->prepare("DELETE FROM blog_likes WHERE post_id = ?");
+        $deleteLikesStmt->execute([$postId]);
+
+        // Delete post
+        $deleteStmt = $conn->prepare("DELETE FROM blog_posts WHERE id = ?");
+        $deleteStmt->execute([$postId]);
+
+        echo json_encode(['success' => true, 'message' => 'Post deleted successfully']);
+    } catch (PDOException $e) {
+        error_log("Delete post error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to delete post']);
+    }
+}
+
+function handleDeleteUser($conn)
+{
+    $userId = $_POST['user_id'] ?? 0;
+    $adminId = $_SESSION['user_id'];
+
+    // Prevent self-deletion
+    if ($userId == $adminId) {
+        echo json_encode(['success' => false, 'message' => 'You cannot delete your own account']);
+        return;
+    }
+
+    try {
+        // Delete user (cascade will handle related records)
+        $deleteStmt = $conn->prepare("DELETE FROM users WHERE id = ?");
+        $deleteStmt->execute([$userId]);
+
+        echo json_encode(['success' => true, 'message' => 'User deleted successfully']);
+    } catch (PDOException $e) {
+        error_log("Delete user error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to delete user']);
+    }
+}
+
+function handleSendNotification($conn)
+{
+    $recipients = $_POST['recipients'] ?? 'all'; // all, role, chapter, specific
+    $subject = $_POST['subject'] ?? '';
+    $message = $_POST['message'] ?? '';
+
+    if (empty($subject) || empty($message)) {
+        echo json_encode(['success' => false, 'message' => 'Subject and message are required']);
+        return;
+    }
+
+    try {
+        // Get recipients based on filter
+        $query = "SELECT email, first_name FROM users WHERE status = 'active'";
+
+        if ($recipients === 'role') {
+            $role = $_POST['role'] ?? '';
+            $query .= " AND role = ?";
+            $params = [$role];
+        } elseif ($recipients === 'chapter') {
+            $chapterId = $_POST['chapter_id'] ?? 0;
+            $query .= " AND chapter_id = ?";
+            $params = [$chapterId];
+        } elseif ($recipients === 'specific') {
+            $userIds = $_POST['user_ids'] ?? [];
+            $placeholders = str_repeat('?,', count($userIds) - 1) . '?';
+            $query .= " AND id IN ($placeholders)";
+            $params = $userIds;
+        } else {
+            $params = [];
+        }
+
+        $stmt = $conn->prepare($query);
+        $stmt->execute($params);
+        $users = $stmt->fetchAll();
+
+        // Send emails
+        require_once __DIR__ . '/../config/mailer.php';
+        $mailer = new Mailer();
+
+        $sent = 0;
+        foreach ($users as $user) {
+            if ($mailer->sendNotificationEmail($user['email'], $user['first_name'], $subject, $message)) {
+                $sent++;
+            }
+
+            // Small delay to avoid rate limiting
+            usleep(100000); // 0.1 second
+        }
+
+        echo json_encode([
+            'success' => true,
+            'message' => "Notification sent to {$sent} user(s)"
+        ]);
+    } catch (PDOException $e) {
+        error_log("Send notification error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to send notification']);
+    }
+}
+
+// Add these functions to api/admin.php
+
+function handleGetEventRegistrations($conn)
+{
+    $eventId = $_GET['event_id'] ?? 0;
+
+    try {
+        // Get event details
+        $eventStmt = $conn->prepare("SELECT id, title, registration_limit FROM events WHERE id = ?");
+        $eventStmt->execute([$eventId]);
+        $event = $eventStmt->fetch();
+
+        if (!$event) {
+            echo json_encode(['success' => false, 'message' => 'Event not found']);
+            return;
+        }
+
+        // Get registrations
+        $regStmt = $conn->prepare("
+            SELECT * FROM event_registrations 
+            WHERE event_id = ? 
+            ORDER BY registered_at DESC
+        ");
+        $regStmt->execute([$eventId]);
+        $registrations = $regStmt->fetchAll();
+
+        echo json_encode([
+            'success' => true,
+            'event' => $event,
+            'registrations' => $registrations
+        ]);
+    } catch (PDOException $e) {
+        error_log("Get event registrations error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to fetch registrations']);
+    }
+}
+
+function handleExportRegistrations($conn)
+{
+    $eventId = $_GET['event_id'] ?? 0;
+
+    try {
+        // Get event and registrations
+        $eventStmt = $conn->prepare("SELECT title FROM events WHERE id = ?");
+        $eventStmt->execute([$eventId]);
+        $event = $eventStmt->fetch();
+
+        $regStmt = $conn->prepare("SELECT * FROM event_registrations WHERE event_id = ? ORDER BY registered_at DESC");
+        $regStmt->execute([$eventId]);
+        $registrations = $regStmt->fetchAll();
+
+        // Create CSV
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="' . sanitize_filename($event['title']) . '_registrations.csv"');
+
+        $output = fopen('php://output', 'w');
+
+        // Headers
+        fputcsv($output, ['Name', 'Email', 'Phone', 'Chapter', 'Dietary Needs', 'Registered At', 'Attendance Confirmed']);
+
+        // Data
+        foreach ($registrations as $reg) {
+            fputcsv($output, [
+                $reg['name'],
+                $reg['email'],
+                $reg['phone'],
+                $reg['chapter'],
+                $reg['dietary_needs'],
+                $reg['registered_at'],
+                $reg['attendance_confirmed'] ? 'Yes' : 'No'
+            ]);
+        }
+
+        fclose($output);
+        exit;
+    } catch (PDOException $e) {
+        error_log("Export registrations error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to export registrations']);
+    }
+}
+
+function sanitize_filename($filename)
+{
+    return preg_replace('/[^A-Za-z0-9_\-]/', '_', $filename);
+}
+
+
+
+function handleCreateEvent($conn)
+{
+    $title = trim($_POST['title'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $eventType = $_POST['event_type'] ?? '';
+    $startDate = $_POST['start_date'] ?? '';
+    $endDate = $_POST['end_date'] ?? null;
+    $location = trim($_POST['location'] ?? '');
+    $latitude = $_POST['latitude'] ?? null;
+    $longitude = $_POST['longitude'] ?? null;
+    $virtualLink = trim($_POST['virtual_link'] ?? '');
+    $chapterId = $_POST['chapter_id'] ?? null;
+    $registrationEnabled = isset($_POST['registration_enabled']) ? 1 : 0;
+    $registrationLimit = $_POST['registration_limit'] ?? null;
+    $status = $_POST['status'] ?? 'upcoming';
+    $featured = isset($_POST['featured']) ? 1 : 0;
+    $userId = $_SESSION['user_id'];
+
+    // Validation
+    if (empty($title) || empty($description) || empty($eventType) || empty($startDate) || empty($location)) {
+        echo json_encode(['success' => false, 'message' => 'Please fill all required fields']);
+        return;
+    }
+
+    // Generate slug
+    $slug = generateSlug($title);
+
+    // Check for duplicate slug
+    $checkStmt = $conn->prepare("SELECT id FROM events WHERE slug = ?");
+    $checkStmt->execute([$slug]);
+    if ($checkStmt->fetch()) {
+        $slug = $slug . '-' . time();
+    }
+
+    // Handle hero image upload
+    $heroImage = null;
+    if (isset($_FILES['hero_image']) && $_FILES['hero_image']['error'] === UPLOAD_ERR_OK) {
+        $file = $_FILES['hero_image'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+        if (!in_array($file['type'], $allowedTypes)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid image type']);
+            return;
+        }
+
+        if ($file['size'] > 5 * 1024 * 1024) {
+            echo json_encode(['success' => false, 'message' => 'Image too large. Max 5MB']);
+            return;
+        }
+
+        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = 'event_' . time() . '_' . uniqid() . '.' . $extension;
+        $uploadPath = UPLOAD_PATH . $filename;
+
+        if (!is_dir(UPLOAD_PATH)) {
+            mkdir(UPLOAD_PATH, 0777, true);
+        }
+
+        if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+            $heroImage = $filename;
+        }
+    }
+
+    try {
+        $stmt = $conn->prepare("
+            INSERT INTO events (
+                title, slug, description, event_type, start_date, end_date,
+                location, latitude, longitude, virtual_link, hero_image,
+                chapter_id, registration_enabled, registration_limit,
+                status, featured, created_by, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+
+        $stmt->execute([
+            $title,
+            $slug,
+            $description,
+            $eventType,
+            $startDate,
+            $endDate,
+            $location,
+            $latitude,
+            $longitude,
+            $virtualLink,
+            $heroImage,
+            $chapterId,
+            $registrationEnabled,
+            $registrationLimit,
+            $status,
+            $featured,
+            $userId
+        ]);
+
+        $eventId = $conn->lastInsertId();
+
+        // Log activity
+        $logStmt = $conn->prepare("
+            INSERT INTO activity_log (user_id, action, entity_type, entity_id, ip_address, user_agent)
+            VALUES (?, 'event_created', 'event', ?, ?, ?)
+        ");
+        $logStmt->execute([$userId, $eventId, $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '']);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Event created successfully',
+            'event_id' => $eventId
+        ]);
+    } catch (PDOException $e) {
+        error_log("Create event error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to create event']);
+    }
+}
+
+function generateSlug($text)
+{
+    // Convert to lowercase
+    $text = strtolower($text);
+    // Replace non-alphanumeric characters with hyphens
+    $text = preg_replace('/[^a-z0-9]+/', '-', $text);
+    // Remove leading and trailing hyphens
+    $text = trim($text, '-');
+    return $text;
+}
