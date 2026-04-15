@@ -86,6 +86,11 @@
     
     <!-- Main JavaScript -->
     <script src="<?= ASSETS_PATH ?>js/main.js"></script>
+    <!-- Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Custom Scripts -->
+     <script src="<?= ASSETS_PATH ?>js/animations.js"></script>
     
     <!-- Page Specific JS -->
     <?php if (isset($pageJS)): ?>
