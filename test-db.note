@@ -1,0 +1,97 @@
+scribes-global/
+├── .htaccess
+├── index.php
+├── config/
+│   ├── database.php
+│   ├── config.php
+│   └── session.php
+├── assets/
+│   ├── css/
+│   │   ├── main.css
+│   │   └── pages/
+│   │       ├── home.css
+│   │       ├── about.css
+│   │       ├── events.css
+│   │       ├── media.css
+│   │       ├── blog.css
+│   │       ├── auth.css
+│   │       ├── dashboard.css
+│   │       └── admin.css
+│   ├── js/
+│   │   ├── main.js
+│   │   ├── auth.js
+│   │   └── components/
+│   ├── images/
+│   │   ├── logo/
+│   │   ├── badges/
+│   │   └── uploads/
+│   └── fonts/
+├── includes/
+│   ├── header.php
+│   ├── footer.php
+│   ├── nav.php
+│   └── splash.php
+├── pages/
+│   ├── about/
+│   │   ├── scribes-global.php
+│   │   ├── ministries.php
+│   │   └── chapters.php
+│   ├── projects/
+│   │   ├── heal.php
+│   │   └── move.php
+│   ├── events/
+│   │   ├── index.php
+│   │   ├── details.php
+│   │   ├── past.php
+│   │   └── register.php
+│   ├── media/
+│   │   ├── index.php
+│   │   ├── poetry.php
+│   │   ├── music.php
+│   │   └── videos.php
+│   ├── blog/
+│   │   ├── index.php
+│   │   └── post.php
+│   ├── give/
+│   │   └── index.php
+│   ├── connect/
+│   │   ├── invite.php
+│   │   └── volunteer.php
+│   └── dashboard/
+│       ├── index.php
+│       ├── profile.php
+│       └── ministries.php
+├── auth/
+│   ├── login.php
+│   ├── register.php
+│   ├── logout.php
+│   ├── forgot-password.php
+│   ├── google-oauth.php
+│   ├── reset-password.php
+│   └── verify-email.php
+├── admin/
+│   ├── posts/
+│   │   └──  create.php
+│   ├── includes/
+│   │   └──  sidebar.php
+│   ├──events/
+│   │   ├── past.php
+│   │   └── create.php
+│   ├── index.php
+│   ├── events.php
+│   ├── content.php
+│   ├── chapters.php
+│   ├── badges.php
+│   ├── posts.php
+│   ├── users.php
+│   ├── bookings.php
+│   └── settings.php
+└── api/
+    ├── auth.php
+    ├── events.php
+    ├── content.php
+    ├── admin.php
+    ├── auth.php
+    ├── blog.php 
+    ├── chapters.php
+    └── users.php

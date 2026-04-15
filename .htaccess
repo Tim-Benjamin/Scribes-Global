@@ -16,6 +16,10 @@ Header set X-Content-Type-Options "nosniff"
 Header set X-Frame-Options "SAMEORIGIN"
 Header set X-XSS-Protection "1; mode=block"
 
+# ✅ ADD THIS — Declare video MIME types explicitly
+AddType video/mp4  .mp4
+AddType video/webm .webm
+
 # Enable compression
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript
@@ -30,6 +34,9 @@ Header set X-XSS-Protection "1; mode=block"
     ExpiresByType image/png "access plus 1 year"
     ExpiresByType text/css "access plus 1 month"
     ExpiresByType application/javascript "access plus 1 month"
+    # ✅ ADD THIS — Cache video files too
+    ExpiresByType video/mp4  "access plus 1 month"
+    ExpiresByType video/webm "access plus 1 month"
 </IfModule>
 
 # Deny access to sensitive files
