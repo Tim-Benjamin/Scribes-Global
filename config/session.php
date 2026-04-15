@@ -62,4 +62,64 @@ function isAdmin() {
 function regenerateSession() {
     session_regenerate_id(true);
 }
+
+
+/**
+ * Get user badges
+ */
+function getUserBadges($userId = null) {
+    if (!$userId && !isLoggedIn()) {
+        return [];
+    }
+    
+    $userId = $userId ?? $_SESSION['user_id'];
+    
+    $db = new Database();
+    $conn = $db->connect();
+    
+    try {
+        $stmt = $conn->prepare("SELECT badge_type FROM user_badges WHERE user_id = ? ORDER BY awarded_at DESC");
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (PDOException $e) {
+        error_log("Get user badges error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Render user name with badges
+ */
+function renderUserNameWithBadges($firstName, $lastName, $badges, $size = 16) {
+    require_once __DIR__ . '/../includes/badge-svg.php';
+    
+    $badgeColors = [
+        'verified' => 'gold',
+        'founder' => 'red',
+        'ministry_leader' => 'purple',
+        'featured' => 'pink',
+        'certified' => 'green',
+        'active' => 'blue',
+        'elite' => 'teal',
+        'supporter' => 'orange',
+        'veteran' => 'silver',
+        'premium' => 'black'
+    ];
+    
+    $output = '<span style="display: inline-flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">';
+    $output .= '<span style="font-weight: inherit;">' . htmlspecialchars($firstName . ' ' . $lastName) . '</span>';
+    
+    if (!empty($badges)) {
+        foreach ($badges as $badge) {
+            if (isset($badgeColors[$badge])) {
+                $output .= '<span class="verified-badge" style="display: inline-flex; width: ' . $size . 'px; height: ' . $size . 'px;" title="' . ucfirst(str_replace('_', ' ', $badge)) . '">';
+                $output .= renderBadgeSVG($badgeColors[$badge], $size);
+                $output .= '</span>';
+            }
+        }
+    }
+    
+    $output .= '</span>';
+    return $output;
+}
 ?>
