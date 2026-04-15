@@ -384,33 +384,10 @@ require_once __DIR__ . '/../../includes/header.php';
           </div>
 
           <div class="profile-name">
-            <?= htmlspecialchars($user['first_name']) ?> <?= htmlspecialchars($user['last_name']) ?>
             <?php
-            // Display badges
-            $badgesQuery = $conn->prepare("SELECT badge_type FROM user_badges WHERE user_id = ?");
-            $badgesQuery->execute([$user['id']]);
-            $userBadgesData = $badgesQuery->fetchAll(PDO::FETCH_COLUMN);
-
-            foreach ($userBadgesData as $badge):
-              $badgeColors = [
-                'verified' => 'gold',
-                'founder' => 'red',
-                'ministry_leader' => 'purple',
-                'featured' => 'pink',
-                'certified' => 'green',
-                'active' => 'silver'
-              ];
-              $badgeClass = $badgeColors[$badge] ?? 'silver';
+            $userBadges = getUserBadges($user['id']);
+            echo renderUserNameWithBadges($user['first_name'], $user['last_name'], $userBadges, 24);
             ?>
-              <span class="verified-badge badge-<?= $badgeClass ?>" title="<?= ucfirst(str_replace('_', ' ', $badge)) ?>">
-                <svg width="24" height="24" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <g>
-                    <path d="M256 0L289.2 83.8L378.1 51.9L371.3 144.7L470.1 141.9L427.4 225.7L512 256L427.4 286.3L470.1 370.1L371.3 367.3L378.1 460.1L289.2 428.2L256 512L222.8 428.2L133.9 460.1L140.7 367.3L41.9 370.1L84.6 286.3L0 256L84.6 225.7L41.9 141.9L140.7 144.7L133.9 51.9L222.8 83.8L256 0Z" />
-                    <circle cx="256" cy="256" r="160" />
-                  </g>
-                </svg>
-              </span>
-            <?php endforeach; ?>
           </div>
 
           <div class="profile-tags">

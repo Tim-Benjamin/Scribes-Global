@@ -17,6 +17,8 @@ $conn = $db->connect();
 $stmt = $conn->prepare("
     SELECT e.*, c.name as chapter_name, c.location as chapter_location,
            (SELECT COUNT(*) FROM event_registrations WHERE event_id = e.id) as registration_count,
+           (SELECT COUNT(*) FROM event_rsvps WHERE event_id = e.id AND response = 'yes') as rsvp_yes_count,
+           (SELECT COUNT(*) FROM event_rsvps WHERE event_id = e.id AND response = 'maybe') as rsvp_maybe_count,
            u.first_name as creator_first_name, u.last_name as creator_last_name
     FROM events e
     LEFT JOIN chapters c ON e.chapter_id = c.id
@@ -31,13 +33,32 @@ if (!$event) {
     exit;
 }
 
-// Check if user is already registered
+// Increment views
+$viewStmt = $conn->prepare("UPDATE events SET views = views + 1 WHERE id = ?");
+$viewStmt->execute([$eventId]);
+
+// Check if user is registered or RSVPd
 $isRegistered = false;
+$hasRSVPd = false;
+$userRSVP = null;
+$user = null;
+
 if (isLoggedIn()) {
     $user = getCurrentUser();
+    
+    // Check registration
     $regCheckStmt = $conn->prepare("SELECT id FROM event_registrations WHERE event_id = ? AND user_id = ?");
     $regCheckStmt->execute([$eventId, $user['id']]);
     $isRegistered = $regCheckStmt->fetch() ? true : false;
+    
+    // Check RSVP
+    $rsvpCheckStmt = $conn->prepare("SELECT response FROM event_rsvps WHERE event_id = ? AND user_id = ?");
+    $rsvpCheckStmt->execute([$eventId, $user['id']]);
+    $rsvpResult = $rsvpCheckStmt->fetch();
+    if ($rsvpResult) {
+        $hasRSVPd = true;
+        $userRSVP = $rsvpResult['response'];
+    }
 }
 
 // Get related events
@@ -50,6 +71,21 @@ $relatedStmt = $conn->prepare("
 $relatedStmt->execute([$eventId]);
 $relatedEvents = $relatedStmt->fetchAll();
 
+// Parse gallery
+$galleryImages = [];
+if (!empty($event['gallery'])) {
+    $galleryImages = json_decode($event['gallery'], true) ?? [];
+}
+
+// Parse videos
+$videos = [];
+if (!empty($event['videos'])) {
+    $videos = json_decode($event['videos'], true) ?? [];
+}
+
+$eventTime = strtotime($event['start_date']);
+$currentTime = time();
+
 $pageTitle = htmlspecialchars($event['title']) . ' - Events - Scribes Global';
 $pageDescription = htmlspecialchars(substr($event['description'], 0, 150));
 $pageCSS = 'events';
@@ -58,7 +94,132 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <style>
-/* Additional inline styles for event details */
+/* Countdown Timer */
+.countdown-section {
+  background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%);
+  padding: 3rem 2rem;
+  border-radius: var(--radius-2xl);
+  margin-bottom: 2rem;
+  color: white;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.countdown-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.countdown-title {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+
+.countdown-timer {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.countdown-block {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem 2rem;
+  border-radius: var(--radius-xl);
+  min-width: 100px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.countdown-number {
+  font-size: 3rem;
+  font-weight: 900;
+  display: block;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+  color: #D4AF37;
+  text-shadow: 0 2px 10px rgba(212, 175, 55, 0.5);
+}
+
+.countdown-label {
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+
+/* RSVP Buttons */
+.rsvp-section {
+  background: white;
+  padding: 2rem;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-bottom: 2rem;
+}
+
+.rsvp-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.rsvp-btn {
+  flex: 1;
+  padding: 1rem;
+  border: 2px solid var(--gray-300);
+  background: white;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rsvp-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.rsvp-btn.active.yes {
+  border-color: #51CF66;
+  background: rgba(81, 207, 102, 0.1);
+}
+
+.rsvp-btn.active.no {
+  border-color: #EB5757;
+  background: rgba(235, 87, 87, 0.1);
+}
+
+.rsvp-btn.active.maybe {
+  border-color: #FFA500;
+  background: rgba(255, 165, 0, 0.1);
+}
+
+.rsvp-icon {
+  font-size: 2rem;
+}
+
+.rsvp-count {
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  font-weight: 600;
+}
+
+/* Share Buttons */
 .share-buttons {
   display: flex;
   gap: 0.5rem;
@@ -76,21 +237,91 @@ require_once __DIR__ . '/../../includes/header.php';
   color: var(--gray-600);
   cursor: pointer;
   transition: all var(--transition-base);
+  text-decoration: none;
 }
 
 .share-btn:hover {
-  border-color: var(--primary-purple);
-  background: var(--primary-purple);
-  color: white;
   transform: translateY(-2px);
 }
 
-#map {
-  height: 300px;
-  border-radius: var(--radius-lg);
-  margin-top: 1rem;
+.share-btn.facebook:hover {
+  border-color: #1877F2;
+  background: #1877F2;
+  color: white;
 }
 
+.share-btn.twitter:hover {
+  border-color: #1DA1F2;
+  background: #1DA1F2;
+  color: white;
+}
+
+.share-btn.whatsapp:hover {
+  border-color: #25D366;
+  background: #25D366;
+  color: white;
+}
+
+.share-btn.linkedin:hover {
+  border-color: #0A66C2;
+  background: #0A66C2;
+  color: white;
+}
+
+.share-btn.copy:hover {
+  border-color: #6B46C1;
+  background: #6B46C1;
+  color: white;
+}
+
+/* Gallery Grid */
+.event-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.event-gallery-item {
+  aspect-ratio: 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+
+.event-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-base);
+}
+
+.event-gallery-item:hover img {
+  transform: scale(1.1);
+}
+
+/* Video Grid */
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.video-item {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.video-item iframe {
+  width: 100%;
+  height: 200px;
+  border: none;
+}
+
+/* Registration Success */
 .registration-success {
   background: linear-gradient(135deg, #51CF66 0%, #2F9E44 100%);
   color: white;
@@ -98,13 +329,116 @@ require_once __DIR__ . '/../../includes/header.php';
   border-radius: var(--radius-xl);
   text-align: center;
   margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(81, 207, 102, 0.3);
 }
 
 .registration-success h3 {
   color: white;
   margin-bottom: 0.5rem;
 }
+
+/* Modal Styles */
+.registration-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.registration-modal.active {
+  display: flex;
+}
+
+.registration-modal-content {
+  background: white;
+  border-radius: var(--radius-2xl);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.registration-modal-header {
+  padding: 2rem;
+  border-bottom: 2px solid var(--gray-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(107, 70, 193, 0.05) 0%, rgba(45, 156, 219, 0.05) 100%);
+}
+
+.registration-modal-close {
+  background: var(--gray-100);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-base);
+  font-size: 1.25rem;
+  color: var(--gray-600);
+}
+
+.registration-modal-close:hover {
+  background: #EB5757;
+  color: white;
+  transform: rotate(90deg);
+}
+
+.registration-modal-body {
+  padding: 2rem;
+}
+
+@media (max-width: 768px) {
+  .countdown-timer {
+    gap: 1rem;
+  }
+  
+  .countdown-block {
+    padding: 1rem 1.5rem;
+    min-width: 80px;
+  }
+  
+  .countdown-number {
+    font-size: 2rem;
+  }
+  
+  .rsvp-buttons {
+    flex-direction: column;
+  }
+  
+  .share-buttons {
+    flex-wrap: wrap;
+  }
+}
 </style>
+
+<div id="three-canvas-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none;"></div>
 
 <!-- Event Hero -->
 <section class="event-detail-hero">
@@ -148,16 +482,19 @@ require_once __DIR__ . '/../../includes/header.php';
         </div>
         
         <div class="share-buttons">
-          <button class="share-btn" onclick="shareEvent('facebook')" title="Share on Facebook">
+          <button class="share-btn facebook" onclick="shareEvent('facebook')" title="Share on Facebook">
             <i class="fab fa-facebook-f"></i>
           </button>
-          <button class="share-btn" onclick="shareEvent('twitter')" title="Share on Twitter">
+          <button class="share-btn twitter" onclick="shareEvent('twitter')" title="Share on Twitter">
             <i class="fab fa-twitter"></i>
           </button>
-          <button class="share-btn" onclick="shareEvent('whatsapp')" title="Share on WhatsApp">
+          <button class="share-btn whatsapp" onclick="shareEvent('whatsapp')" title="Share on WhatsApp">
             <i class="fab fa-whatsapp"></i>
           </button>
-          <button class="share-btn" onclick="copyLink()" title="Copy Link">
+          <button class="share-btn linkedin" onclick="shareEvent('linkedin')" title="Share on LinkedIn">
+            <i class="fab fa-linkedin-in"></i>
+          </button>
+          <button class="share-btn copy" onclick="copyLink()" title="Copy Link">
             <i class="fas fa-link"></i>
           </button>
         </div>
@@ -169,9 +506,35 @@ require_once __DIR__ . '/../../includes/header.php';
 <!-- Event Content -->
 <section class="event-detail-content">
   <div class="container">
+    <!-- Countdown Timer -->
+    <?php if ($eventTime > $currentTime && $event['status'] === 'upcoming'): ?>
+      <div class="countdown-section" data-aos="fade-up">
+        <h3 class="countdown-title">⏰ Event Starts In</h3>
+        <div class="countdown-timer" id="countdown" data-event-time="<?= $eventTime ?>">
+          <div class="countdown-block">
+            <span class="countdown-number" id="days">00</span>
+            <span class="countdown-label">Days</span>
+          </div>
+          <div class="countdown-block">
+            <span class="countdown-number" id="hours">00</span>
+            <span class="countdown-label">Hours</span>
+          </div>
+          <div class="countdown-block">
+            <span class="countdown-number" id="minutes">00</span>
+            <span class="countdown-label">Minutes</span>
+          </div>
+          <div class="countdown-block">
+            <span class="countdown-number" id="seconds">00</span>
+            <span class="countdown-label">Seconds</span>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
+    
     <div class="event-detail-grid">
       <!-- Main Content -->
       <div class="event-detail-main">
+        <!-- Registration Success -->
         <?php if ($isRegistered): ?>
           <div class="registration-success" data-aos="fade-up">
             <i class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
@@ -180,34 +543,118 @@ require_once __DIR__ . '/../../includes/header.php';
           </div>
         <?php endif; ?>
         
+        <!-- RSVP Section -->
+        <?php if ($event['rsvp_enabled'] && !$isRegistered && strtotime($event['start_date']) > time()): ?>
+          <div class="rsvp-section" data-aos="fade-up">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <div>
+                <h3 style="margin: 0 0 0.5rem 0;">Will you attend this event?</h3>
+                <p style="color: var(--gray-600); margin: 0;">Let us know your response</p>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 1.5rem; font-weight: 900; color: #6B46C1;">
+                  <?= ($event['rsvp_yes_count'] + $event['rsvp_maybe_count']) ?>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--gray-600); text-transform: uppercase; font-weight: 600;">
+                  Responses
+                </div>
+              </div>
+            </div>
+            
+            <div class="rsvp-buttons">
+              <button class="rsvp-btn <?= $userRSVP === 'yes' ? 'active yes' : '' ?>" onclick="submitRSVP('yes')">
+                <div class="rsvp-icon" style="color: #51CF66;">👍</div>
+                <div style="font-weight: 700; font-size: 1rem;">Yes</div>
+                <div class="rsvp-count"><?= $event['rsvp_yes_count'] ?> going</div>
+              </button>
+              
+              <button class="rsvp-btn <?= $userRSVP === 'maybe' ? 'active maybe' : '' ?>" onclick="submitRSVP('maybe')">
+                <div class="rsvp-icon" style="color: #FFA500;">🤔</div>
+                <div style="font-weight: 700; font-size: 1rem;">Maybe</div>
+                <div class="rsvp-count"><?= $event['rsvp_maybe_count'] ?> interested</div>
+              </button>
+              
+              <button class="rsvp-btn <?= $userRSVP === 'no' ? 'active no' : '' ?>" onclick="submitRSVP('no')">
+                <div class="rsvp-icon" style="color: #EB5757;">👎</div>
+                <div style="font-weight: 700; font-size: 1rem;">No</div>
+                <div class="rsvp-count">Can't make it</div>
+              </button>
+            </div>
+          </div>
+        <?php endif; ?>
+        
         <h2 style="margin-bottom: 1.5rem;">About This Event</h2>
         <div style="color: var(--gray-700); line-height: 1.8; font-size: 1.125rem;">
           <?= nl2br(htmlspecialchars($event['description'])) ?>
         </div>
         
-        <?php if ($event['latitude'] && $event['longitude']): ?>
-          <h2 style="margin-top: 3rem; margin-bottom: 1.5rem;">Location</h2>
-          <div id="map"></div>
+        <!-- Event Gallery -->
+        <?php if (count($galleryImages) > 0): ?>
+          <h2 style="margin-top: 3rem; margin-bottom: 1.5rem;">Event Gallery</h2>
+          <div class="event-gallery-grid">
+            <?php foreach ($galleryImages as $image): ?>
+              <div class="event-gallery-item" onclick="openLightbox('<?= ASSETS_PATH ?>images/uploads/<?= htmlspecialchars($image) ?>')">
+                <img src="<?= ASSETS_PATH ?>images/uploads/<?= htmlspecialchars($image) ?>" alt="Event Gallery">
+              </div>
+            <?php endforeach; ?>
+          </div>
         <?php endif; ?>
         
-        <?php if ($event['gallery']): ?>
-          <h2 style="margin-top: 3rem; margin-bottom: 1.5rem;">Event Gallery</h2>
-          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
-            <?php 
-            $gallery = json_decode($event['gallery'], true);
-            if ($gallery):
-              foreach ($gallery as $image):
-            ?>
-              <img 
-                src="<?= ASSETS_PATH ?>images/uploads/<?= htmlspecialchars($image) ?>" 
-                alt="Event Image" 
-                style="width: 100%; height: 200px; object-fit: cover; border-radius: var(--radius-lg); cursor: pointer;"
-                onclick="openLightbox(this.src)"
-              >
-            <?php 
-              endforeach;
-            endif;
-            ?>
+        <!-- Event Videos -->
+        <?php if (count($videos) > 0): ?>
+          <h2 style="margin-top: 3rem; margin-bottom: 1.5rem;">Event Videos</h2>
+          <div class="video-grid">
+            <?php foreach ($videos as $video): ?>
+              <div class="video-item">
+                <iframe src="<?= htmlspecialchars($video) ?>" allowfullscreen></iframe>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+        
+        <!-- Location -->
+        <?php if ($event['latitude'] && $event['longitude']): ?>
+          <h2 style="margin-top: 3rem; margin-bottom: 1.5rem;">
+            <i class="fas fa-map-marker-alt"></i> Location
+          </h2>
+          <div style="background: var(--gray-100); padding: 1.5rem; border-radius: var(--radius-xl); margin-bottom: 1rem;">
+            <div style="display: flex; align-items: start; gap: 1rem;">
+              <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; flex-shrink: 0;">
+                <i class="fas fa-location-arrow"></i>
+              </div>
+              <div style="flex: 1;">
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--dark-bg);">Event Venue</h4>
+                <p style="margin: 0; color: var(--gray-700); font-size: 1.125rem; line-height: 1.6;">
+                  <?= htmlspecialchars($event['location']) ?>
+                </p>
+                <div style="margin-top: 0.75rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+                  <a href="https://www.google.com/maps?q=<?= $event['latitude'] ?>,<?= $event['longitude'] ?>" target="_blank" class="btn btn-outline btn-sm">
+                    <i class="fas fa-directions"></i> Get Directions
+                  </a>
+                  <button class="btn btn-outline btn-sm" onclick="copyCoordinates(<?= $event['latitude'] ?>, <?= $event['longitude'] ?>)">
+                    <i class="fas fa-copy"></i> Copy Coordinates
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="eventMap" style="height: 350px; border-radius: var(--radius-xl); overflow: hidden; border: 3px solid var(--gray-200); box-shadow: 0 4px 20px rgba(0,0,0,0.1);"></div>
+        <?php else: ?>
+          <h2 style="margin-top: 3rem; margin-bottom: 1.5rem;">
+            <i class="fas fa-map-marker-alt"></i> Location
+          </h2>
+          <div style="background: var(--gray-100); padding: 1.5rem; border-radius: var(--radius-xl);">
+            <div style="display: flex; align-items: start; gap: 1rem;">
+              <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; flex-shrink: 0;">
+                <i class="fas fa-map-marker-alt"></i>
+              </div>
+              <div style="flex: 1;">
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--dark-bg);">Event Venue</h4>
+                <p style="margin: 0; color: var(--gray-700); font-size: 1.125rem; line-height: 1.6;">
+                  <?= htmlspecialchars($event['location']) ?>
+                </p>
+              </div>
+            </div>
           </div>
         <?php endif; ?>
         
@@ -275,46 +722,31 @@ require_once __DIR__ . '/../../includes/header.php';
             </div>
           <?php endif; ?>
           
-          <div class="event-info-item">
-            <div class="event-info-icon">
-              <i class="fas fa-ticket-alt"></i>
-            </div>
-            <div class="event-info-details">
-              <h4>Registration</h4>
-              <p>
-                <?= $event['registration_count'] ?> registered
-                <?php if ($event['registration_limit']): ?>
-                  / <?= $event['registration_limit'] ?> spots
-                <?php endif; ?>
-              </p>
-            </div>
-          </div>
-          
-          <?php if ($event['virtual_link'] && $event['event_type'] !== 'physical'): ?>
+          <?php if ($event['registration_enabled']): ?>
             <div class="event-info-item">
               <div class="event-info-icon">
-                <i class="fas fa-video"></i>
+                <i class="fas fa-ticket-alt"></i>
               </div>
               <div class="event-info-details">
-                <h4>Virtual Link</h4>
-                <p style="font-size: 0.875rem;">Link will be sent upon registration</p>
+                <h4>Registration</h4>
+                <p>
+                  <?= $event['registration_count'] ?> registered
+                  <?php if ($event['registration_limit']): ?>
+                    / <?= $event['registration_limit'] ?> spots
+                  <?php endif; ?>
+                </p>
               </div>
             </div>
           <?php endif; ?>
           
-          <?php if (!$isRegistered && $event['registration_enabled']): ?>
+          <?php if (!$isRegistered && $event['registration_enabled'] && strtotime($event['start_date']) > time()): ?>
             <?php
             $isFull = $event['registration_limit'] && $event['registration_count'] >= $event['registration_limit'];
-            $isPast = strtotime($event['start_date']) < time();
             ?>
             
             <?php if ($isFull): ?>
               <button class="btn btn-secondary" style="width: 100%; margin-top: 1.5rem;" disabled>
                 <i class="fas fa-users"></i> Event Full
-              </button>
-            <?php elseif ($isPast): ?>
-              <button class="btn btn-secondary" style="width: 100%; margin-top: 1.5rem;" disabled>
-                <i class="fas fa-clock"></i> Event Ended
               </button>
             <?php else: ?>
               <button class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;" onclick="openRegistrationModal()">
@@ -358,120 +790,115 @@ require_once __DIR__ . '/../../includes/header.php';
   <div class="registration-modal-content">
     <div class="registration-modal-header">
       <h2 style="margin: 0;">Register for Event</h2>
-      <button class="registration-modal-close" onclick="closeRegistrationModal()">
+      <button class="registration-modal-close" onclick="closeRegistrationModal()" type="button">
         <i class="fas fa-times"></i>
       </button>
     </div>
     
     <div class="registration-modal-body">
+      <?php if (isLoggedIn()): ?>
+        <!-- Logged in user options -->
+        <div style="background: linear-gradient(135deg, rgba(107, 70, 193, 0.05) 0%, rgba(45, 156, 219, 0.05) 100%); padding: 1.5rem; border-radius: var(--radius-xl); margin-bottom: 1.5rem; text-align: center;">
+          <i class="fas fa-user-check" style="font-size: 2.5rem; color: #6B46C1; margin-bottom: 1rem;"></i>
+          <h3 style="margin: 0 0 0.5rem 0; color: var(--dark-bg);">Welcome back, <?= htmlspecialchars($user['first_name']) ?>!</h3>
+          <p style="margin: 0; color: var(--gray-600);">We can use your account information to register you quickly</p>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+          <button type="button" class="btn btn-primary" style="flex: 1;" onclick="showQuickRegister()">
+            <i class="fas fa-bolt"></i> Quick Register
+          </button>
+          <button type="button" class="btn btn-outline" style="flex: 1;" onclick="showCustomRegister()">
+            <i class="fas fa-edit"></i> Custom Info
+          </button>
+        </div>
+      <?php endif; ?>
+      
+      <!-- Registration Form -->
       <form id="registrationForm">
         <input type="hidden" name="event_id" value="<?= $eventId ?>">
         
-        <?php if (isLoggedIn()): ?>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="name" class="form-label">Full Name *</label>
-              <input 
-                type="text" 
-                id="name" 
-                name="name" 
-                class="form-control" 
-                value="<?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?>"
-                required
-              >
-            </div>
-            
-            <div class="form-group">
-              <label for="email" class="form-label">Email *</label>
-              <input 
-                type="email" 
-                id="email" 
-                name="email" 
-                class="form-control" 
-                value="<?= htmlspecialchars($user['email']) ?>"
-                required
-              >
+        <div id="quickRegisterFields" style="<?= !isLoggedIn() ? 'display: none;' : '' ?>">
+          <div style="padding: 1rem; background: var(--gray-100); border-radius: var(--radius-lg); margin-bottom: 1.5rem;">
+            <p style="margin: 0 0 0.75rem 0; font-weight: 600; color: var(--dark-bg);">
+              <i class="fas fa-info-circle"></i> Registration Details:
+            </p>
+            <div style="display: grid; gap: 0.5rem; font-size: 0.875rem; color: var(--gray-700);">
+              <div><strong>Name:</strong> <?= htmlspecialchars(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?></div>
+              <div><strong>Email:</strong> <?= htmlspecialchars($user['email'] ?? '') ?></div>
+              <div><strong>Phone:</strong> <?= htmlspecialchars($user['phone'] ?? 'Not provided') ?></div>
             </div>
           </div>
           
-          <div class="form-row">
-            <div class="form-group">
-              <label for="phone" class="form-label">Phone Number *</label>
-              <input 
-                type="tel" 
-                id="phone" 
-                name="phone" 
-                class="form-control" 
-                value="<?= htmlspecialchars($user['phone'] ?? '') ?>"
-                required
-              >
-            </div>
-            
-            <div class="form-group">
-              <label for="chapter" class="form-label">Chapter</label>
-              <input 
-                type="text" 
-                id="chapter" 
-                name="chapter" 
-                class="form-control" 
-                placeholder="Your local chapter"
-              >
-            </div>
-          </div>
-        <?php else: ?>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="name" class="form-label">Full Name *</label>
-              <input 
-                type="text" 
-                id="name" 
-                name="name" 
-                class="form-control" 
-                required
-              >
-            </div>
-            
-            <div class="form-group">
-              <label for="email" class="form-label">Email *</label>
-              <input 
-                type="email" 
-                id="email" 
-                name="email" 
-                class="form-control" 
-                required
-              >
-            </div>
+          <input type="hidden" name="use_account_info" value="1">
+        </div>
+        
+        <div id="customRegisterFields">
+          <div class="form-group">
+            <label for="reg_name" class="form-label">
+              Full Name <span style="color: #EB5757;">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="reg_name" 
+              name="name" 
+              class="form-control" 
+              placeholder="Enter your full name"
+              value="<?= isLoggedIn() ? htmlspecialchars(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) : '' ?>"
+              required
+            >
           </div>
           
-          <div class="form-row">
-            <div class="form-group">
-              <label for="phone" class="form-label">Phone Number *</label>
-              <input 
-                type="tel" 
-                id="phone" 
-                name="phone" 
-                class="form-control" 
-                required
-              >
-            </div>
-            
-            <div class="form-group">
-              <label for="chapter" class="form-label">Chapter</label>
-              <input 
-                type="text" 
-                id="chapter" 
-                name="chapter" 
-                class="form-control" 
-                placeholder="Your local chapter"
-              >
-            </div>
+          <div class="form-group">
+            <label for="reg_email" class="form-label">
+              Email Address <span style="color: #EB5757;">*</span>
+            </label>
+            <input 
+              type="email" 
+              id="reg_email" 
+              name="email" 
+              class="form-control" 
+              placeholder="your.email@example.com"
+              value="<?= isLoggedIn() ? htmlspecialchars($user['email'] ?? '') : '' ?>"
+              required
+            >
           </div>
-        <?php endif; ?>
+          
+          <div class="form-group">
+            <label for="reg_phone" class="form-label">
+              Phone Number <span style="color: #EB5757;">*</span>
+            </label>
+            <input 
+              type="tel" 
+              id="reg_phone" 
+              name="phone" 
+              class="form-control" 
+              placeholder="+233 123 456 789"
+              value="<?= isLoggedIn() ? htmlspecialchars($user['phone'] ?? '') : '' ?>"
+              required
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="reg_chapter" class="form-label">
+              Chapter (Optional)
+            </label>
+            <input 
+              type="text" 
+              id="reg_chapter" 
+              name="chapter" 
+              class="form-control" 
+              placeholder="Your local chapter"
+            >
+          </div>
+        </div>
         
         <div class="form-group">
-          <label for="dietary_needs" class="form-label">Dietary Needs/Restrictions</label>
+          <label for="reg_dietary" class="form-label">
+            Dietary Needs/Restrictions (Optional)
+          </label>
           <textarea 
-            id="dietary_needs" 
+            id="reg_dietary" 
             name="dietary_needs" 
             class="form-control" 
             rows="2"
@@ -480,26 +907,28 @@ require_once __DIR__ . '/../../includes/header.php';
         </div>
         
         <div class="form-group">
-          <label for="additional_info" class="form-label">Additional Information</label>
+          <label for="reg_additional" class="form-label">
+            Additional Information (Optional)
+          </label>
           <textarea 
-            id="additional_info" 
+            id="reg_additional" 
             name="additional_info" 
             class="form-control" 
-            rows="3"
+            rows="2"
             placeholder="Anything else we should know?"
           ></textarea>
         </div>
         
         <div class="form-group">
-          <div class="checkbox-group">
-            <input type="checkbox" id="terms" name="terms" required>
-            <label for="terms">
-              I agree to the event <a href="<?= SITE_URL ?>/pages/legal/terms" target="_blank">terms and conditions</a>
-            </label>
-          </div>
+          <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
+            <input type="checkbox" id="reg_terms" name="terms" required style="width: 20px; height: 20px;">
+            <span style="font-size: 0.875rem; color: var(--gray-700);">
+              I agree to the event <a href="<?= SITE_URL ?>/pages/legal/terms" target="_blank" style="color: #6B46C1; font-weight: 600;">terms and conditions</a>
+            </span>
+          </label>
         </div>
         
-        <button type="submit" class="btn btn-primary" style="width: 100%;">
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
           <i class="fas fa-check"></i> Complete Registration
         </button>
       </form>
@@ -508,63 +937,173 @@ require_once __DIR__ . '/../../includes/header.php';
 </div>
 
 <script>
-// Registration Modal
+// Countdown Timer
+<?php if ($eventTime > $currentTime && $event['status'] === 'upcoming'): ?>
+const countdown = document.getElementById('countdown');
+if (countdown) {
+  const eventTime = parseInt(countdown.getAttribute('data-event-time')) * 1000;
+
+  function updateCountdown() {
+    const now = new Date().getTime();
+    const distance = eventTime - now;
+    
+    if (distance < 0) {
+      countdown.innerHTML = '<div class="countdown-block"><span class="countdown-number">🎉</span><span class="countdown-label">Event Started!</span></div>';
+      return;
+    }
+    
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    
+    document.getElementById('days').textContent = String(days).padStart(2, '0');
+    document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+    document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+    document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+  }
+
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+}
+<?php endif; ?>
+
+// Registration Modal Functions
 function openRegistrationModal() {
-  document.getElementById('registrationModal').classList.add('active');
-  document.body.style.overflow = 'hidden';
+  const modal = document.getElementById('registrationModal');
+  if (modal) {
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    
+    <?php if (isLoggedIn()): ?>
+      showQuickRegister();
+    <?php else: ?>
+      showCustomRegister();
+    <?php endif; ?>
+  }
 }
 
 function closeRegistrationModal() {
-  document.getElementById('registrationModal').classList.remove('active');
-  document.body.style.overflow = 'auto';
+  const modal = document.getElementById('registrationModal');
+  if (modal) {
+    modal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  }
+}
+
+function showQuickRegister() {
+  const quickFields = document.getElementById('quickRegisterFields');
+  const customFields = document.getElementById('customRegisterFields');
+  
+  if (quickFields && customFields) {
+    quickFields.style.display = 'block';
+    customFields.style.display = 'none';
+    
+    // Disable custom field requirements
+    document.getElementById('reg_name').required = false;
+    document.getElementById('reg_email').required = false;
+    document.getElementById('reg_phone').required = false;
+  }
+}
+
+function showCustomRegister() {
+  const quickFields = document.getElementById('quickRegisterFields');
+  const customFields = document.getElementById('customRegisterFields');
+  
+  if (quickFields && customFields) {
+    quickFields.style.display = 'none';
+    customFields.style.display = 'block';
+    
+    // Enable custom field requirements
+    document.getElementById('reg_name').required = true;
+    document.getElementById('reg_email').required = true;
+    document.getElementById('reg_phone').required = true;
+  }
 }
 
 // Close modal on overlay click
-document.getElementById('registrationModal').addEventListener('click', function(e) {
-  if (e.target === this) {
-    closeRegistrationModal();
-  }
-});
+const modal = document.getElementById('registrationModal');
+if (modal) {
+  modal.addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeRegistrationModal();
+    }
+  });
+}
 
 // Registration Form Submit
-document.getElementById('registrationForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  
-  const btn = this.querySelector('button[type="submit"]');
-  const originalText = btn.innerHTML;
-  btn.classList.add('btn-loading');
-  btn.disabled = true;
-  
-  const formData = new FormData(this);
-  
-  try {
-    const response = await fetch('<?= SITE_URL ?>/api/events.php?action=register', {
-      method: 'POST',
-      body: formData
-    });
+const regForm = document.getElementById('registrationForm');
+if (regForm) {
+  regForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
     
-    const result = await response.json();
+    const btn = this.querySelector('button[type="submit"]');
+    const originalText = btn.innerHTML;
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
     
-    if (result.success) {
-      // Show success message and reload
-      alert('Registration successful! Check your email for confirmation.');
-      window.location.reload();
-    } else {
-      alert(result.message || 'Registration failed. Please try again.');
+    const formData = new FormData(this);
+    
+    try {
+      const response = await fetch('<?= SITE_URL ?>/api/events.php?action=register', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('✅ ' + result.message);
+        window.location.reload();
+      } else {
+        alert('❌ ' + (result.message || 'Registration failed. Please try again.'));
+        btn.classList.remove('btn-loading');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert('❌ An error occurred. Please try again.');
       btn.classList.remove('btn-loading');
       btn.disabled = false;
       btn.innerHTML = originalText;
     }
-  } catch (error) {
-    console.error('Registration error:', error);
-    alert('An error occurred. Please try again.');
-    btn.classList.remove('btn-loading');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-  }
-});
+  });
+}
 
-// Share Event
+// RSVP Function
+async function submitRSVP(response) {
+  <?php if (!isLoggedIn()): ?>
+    alert('Please login to RSVP for this event');
+    window.location.href = '<?= SITE_URL ?>/auth/login?redirect=<?= urlencode($_SERVER['REQUEST_URI']) ?>';
+    return;
+  <?php endif; ?>
+  
+  try {
+    const formData = new FormData();
+    formData.append('event_id', '<?= $eventId ?>');
+    formData.append('response', response);
+    
+    const res = await fetch('<?= SITE_URL ?>/api/events.php?action=rsvp', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await res.json();
+    
+    if (result.success) {
+      window.location.reload();
+    } else {
+      alert(result.message || 'Failed to submit RSVP');
+    }
+  } catch (error) {
+    console.error('RSVP error:', error);
+    alert('An error occurred. Please try again.');
+  }
+}
+
+// Share Functions
 function shareEvent(platform) {
   const url = encodeURIComponent(window.location.href);
   const title = encodeURIComponent('<?= addslashes($event['title']) ?>');
@@ -582,6 +1121,9 @@ function shareEvent(platform) {
     case 'whatsapp':
       shareUrl = `https://wa.me/?text=${text}%20${url}`;
       break;
+    case 'linkedin':
+      shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+      break;
   }
   
   if (shareUrl) {
@@ -591,7 +1133,19 @@ function shareEvent(platform) {
 
 function copyLink() {
   navigator.clipboard.writeText(window.location.href).then(() => {
-    alert('Link copied to clipboard!');
+    alert('✅ Link copied to clipboard!');
+  }).catch(err => {
+    console.error('Failed to copy:', err);
+    alert('❌ Failed to copy link');
+  });
+}
+
+function copyCoordinates(lat, lng) {
+  const coords = `${lat}, ${lng}`;
+  navigator.clipboard.writeText(coords).then(() => {
+    alert('✅ Coordinates copied to clipboard!');
+  }).catch(err => {
+    console.error('Failed to copy:', err);
   });
 }
 
@@ -611,32 +1165,60 @@ function addToCalendar() {
 // Initialize Map
 <?php if ($event['latitude'] && $event['longitude']): ?>
 document.addEventListener('DOMContentLoaded', function() {
-  const map = L.map('map').setView([<?= $event['latitude'] ?>, <?= $event['longitude'] ?>], 15);
-  
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map);
-  
-  L.marker([<?= $event['latitude'] ?>, <?= $event['longitude'] ?>])
-    .addTo(map)
-    .bindPopup('<strong><?= addslashes($event['title']) ?></strong><br><?= addslashes($event['location']) ?>')
-    .openPopup();
+  if (typeof L !== 'undefined') {
+    try {
+      const map = L.map('eventMap').setView([<?= $event['latitude'] ?>, <?= $event['longitude'] ?>], 15);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+      
+      const marker = L.marker([<?= $event['latitude'] ?>, <?= $event['longitude'] ?>]).addTo(map);
+      
+      marker.bindPopup(`
+        <div style="text-align: center; padding: 0.5rem;">
+          <strong style="display: block; margin-bottom: 0.5rem; color: #1A1A2E;"><?= addslashes($event['title']) ?></strong>
+          <p style="margin: 0; font-size: 0.875rem; color: #4A5568;"><?= addslashes($event['location']) ?></p>
+          <a href="https://www.google.com/maps?q=<?= $event['latitude'] ?>,<?= $event['longitude'] ?>" target="_blank" style="display: inline-block; margin-top: 0.5rem; color: #6B46C1; font-weight: 600; font-size: 0.875rem;">
+            <i class="fas fa-directions"></i> Get Directions
+          </a>
+        </div>
+      `).openPopup();
+      
+    } catch (error) {
+      console.error('Map initialization error:', error);
+    }
+  }
 });
 <?php endif; ?>
 
-// Lightbox
+// Lightbox for gallery
 function openLightbox(src) {
   const lightbox = document.createElement('div');
-  lightbox.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem;';
+  lightbox.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 2rem; cursor: pointer;';
   lightbox.onclick = () => lightbox.remove();
   
   const img = document.createElement('img');
   img.src = src;
-  img.style.cssText = 'max-width: 100%; max-height: 100%; border-radius: 1rem;';
+  img.style.cssText = 'max-width: 100%; max-height: 100%; border-radius: 1rem; box-shadow: 0 20px 60px rgba(0,0,0,0.5);';
+  img.onclick = (e) => e.stopPropagation();
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+  closeBtn.style.cssText = 'position: absolute; top: 2rem; right: 2rem; background: white; border: none; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; color: #1A1A2E; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.3s;';
+  closeBtn.onmouseover = () => closeBtn.style.transform = 'scale(1.1) rotate(90deg)';
+  closeBtn.onmouseout = () => closeBtn.style.transform = 'scale(1) rotate(0deg)';
+  closeBtn.onclick = () => lightbox.remove();
   
   lightbox.appendChild(img);
+  lightbox.appendChild(closeBtn);
   document.body.appendChild(lightbox);
 }
 </script>
+
+<!-- Leaflet CSS & JS for Map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>
