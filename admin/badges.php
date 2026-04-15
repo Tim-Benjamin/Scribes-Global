@@ -131,7 +131,7 @@ $badgeDefinitions = [
         'color' => 'blue',
         'description' => '100% profile completion',
         'icon' => '🏆',
-        'auto' => true
+        'auto' => false
     ],
     'elite' => [
         'name' => 'Elite Member',
@@ -152,7 +152,7 @@ $badgeDefinitions = [
         'color' => 'silver',
         'description' => '5+ years member',
         'icon' => '🛡️',
-        'auto' => true
+        'auto' => false
     ],
     'premium' => [
         'name' => 'Premium',

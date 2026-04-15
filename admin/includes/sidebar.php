@@ -14,7 +14,7 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
       </div>
     </div>
   </div>
-  
+
   <nav class="admin-nav">
     <div class="admin-nav-section">
       <div class="admin-nav-title">Main</div>
@@ -27,12 +27,16 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
         <span>Analytics</span>
       </a>
     </div>
-    
+
     <div class="admin-nav-section">
       <div class="admin-nav-title">Content</div>
       <a href="<?= SITE_URL ?>/admin/events" class="admin-nav-item <?= $currentPage === 'events' ? 'active' : '' ?>">
         <i class="fas fa-calendar-alt"></i>
         <span>Events</span>
+      </a>
+      <a href="<?= SITE_URL ?>/admin/events/past" class="admin-nav-item">
+        <i class="fas fa-history"></i>
+        <span>Past Events Media</span>
       </a>
       <a href="<?= SITE_URL ?>/admin/posts" class="admin-nav-item <?= $currentPage === 'posts' ? 'active' : '' ?>">
         <i class="fas fa-newspaper"></i>
@@ -47,7 +51,7 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
         <span>Prayer Requests</span>
       </a>
     </div>
-    
+
     <div class="admin-nav-section">
       <div class="admin-nav-title">Users & Community</div>
       <a href="<?= SITE_URL ?>/admin/users" class="admin-nav-item <?= $currentPage === 'users' ? 'active' : '' ?>">
@@ -67,7 +71,7 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
         <span>Ministries</span>
       </a>
     </div>
-    
+
     <div class="admin-nav-section">
       <div class="admin-nav-title">Financial</div>
       <a href="<?= SITE_URL ?>/admin/donations" class="admin-nav-item <?= $currentPage === 'donations' ? 'active' : '' ?>">
@@ -79,7 +83,7 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
         <span>Reports</span>
       </a>
     </div>
-    
+
     <div class="admin-nav-section">
       <div class="admin-nav-title">System</div>
       <a href="<?= SITE_URL ?>/admin/settings" class="admin-nav-item <?= $currentPage === 'settings' ? 'active' : '' ?>">
