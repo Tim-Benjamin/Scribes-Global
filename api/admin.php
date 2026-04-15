@@ -54,9 +54,23 @@ switch ($action) {
     case 'export_registrations':
         handleExportRegistrations($conn);
         break;
-
     case 'create_event':
         handleCreateEvent($conn);
+        break;
+    case 'get_event_media':
+        handleGetEventMedia($conn);
+        break;
+    case 'upload_event_gallery':
+        handleUploadEventGallery($conn);
+        break;
+    case 'delete_event_gallery_image':
+        handleDeleteEventGalleryImage($conn);
+        break;
+    case 'add_event_video':
+        handleAddEventVideo($conn);
+        break;
+    case 'delete_event_video':
+        handleDeleteEventVideo($conn);
         break;
     default:
         echo json_encode(['success' => false, 'message' => 'Invalid action']);
@@ -470,9 +484,10 @@ function sanitize_filename($filename)
 }
 
 
-
 function handleCreateEvent($conn)
 {
+    error_log("Create event started");
+
     $title = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $eventType = $_POST['event_type'] ?? '';
@@ -485,13 +500,35 @@ function handleCreateEvent($conn)
     $chapterId = $_POST['chapter_id'] ?? null;
     $registrationEnabled = isset($_POST['registration_enabled']) ? 1 : 0;
     $registrationLimit = $_POST['registration_limit'] ?? null;
+    $rsvpEnabled = isset($_POST['rsvp_enabled']) ? 1 : 0;
     $status = $_POST['status'] ?? 'upcoming';
     $featured = isset($_POST['featured']) ? 1 : 0;
+    $notifyUsers = isset($_POST['notify_users']) ? 1 : 0;
     $userId = $_SESSION['user_id'];
 
     // Validation
-    if (empty($title) || empty($description) || empty($eventType) || empty($startDate) || empty($location)) {
-        echo json_encode(['success' => false, 'message' => 'Please fill all required fields']);
+    if (empty($title)) {
+        echo json_encode(['success' => false, 'message' => 'Title is required']);
+        return;
+    }
+
+    if (empty($description)) {
+        echo json_encode(['success' => false, 'message' => 'Description is required']);
+        return;
+    }
+
+    if (empty($eventType)) {
+        echo json_encode(['success' => false, 'message' => 'Event type is required']);
+        return;
+    }
+
+    if (empty($startDate)) {
+        echo json_encode(['success' => false, 'message' => 'Start date is required']);
+        return;
+    }
+
+    if (empty($location)) {
+        echo json_encode(['success' => false, 'message' => 'Location is required']);
         return;
     }
 
@@ -499,52 +536,71 @@ function handleCreateEvent($conn)
     $slug = generateSlug($title);
 
     // Check for duplicate slug
-    $checkStmt = $conn->prepare("SELECT id FROM events WHERE slug = ?");
-    $checkStmt->execute([$slug]);
-    if ($checkStmt->fetch()) {
-        $slug = $slug . '-' . time();
+    try {
+        $checkStmt = $conn->prepare("SELECT id FROM events WHERE slug = ?");
+        $checkStmt->execute([$slug]);
+        if ($checkStmt->fetch()) {
+            $slug = $slug . '-' . time();
+        }
+    } catch (PDOException $e) {
+        error_log("Slug check error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        return;
     }
 
     // Handle hero image upload
     $heroImage = null;
     if (isset($_FILES['hero_image']) && $_FILES['hero_image']['error'] === UPLOAD_ERR_OK) {
-        $file = $_FILES['hero_image'];
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-        if (!in_array($file['type'], $allowedTypes)) {
-            echo json_encode(['success' => false, 'message' => 'Invalid image type']);
+        $heroImage = uploadEventImage($_FILES['hero_image']);
+        if (!$heroImage) {
+            echo json_encode(['success' => false, 'message' => 'Failed to upload hero image']);
             return;
         }
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Hero image is required']);
+        return;
+    }
 
-        if ($file['size'] > 5 * 1024 * 1024) {
-            echo json_encode(['success' => false, 'message' => 'Image too large. Max 5MB']);
-            return;
-        }
-
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $filename = 'event_' . time() . '_' . uniqid() . '.' . $extension;
-        $uploadPath = UPLOAD_PATH . $filename;
-
-        if (!is_dir(UPLOAD_PATH)) {
-            mkdir(UPLOAD_PATH, 0777, true);
-        }
-
-        if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
-            $heroImage = $filename;
+    // Handle gallery images
+    $galleryImages = [];
+    if (isset($_FILES['gallery_images'])) {
+        foreach ($_FILES['gallery_images']['tmp_name'] as $key => $tmp_name) {
+            if ($_FILES['gallery_images']['error'][$key] === UPLOAD_ERR_OK) {
+                $file = [
+                    'name' => $_FILES['gallery_images']['name'][$key],
+                    'type' => $_FILES['gallery_images']['type'][$key],
+                    'tmp_name' => $tmp_name,
+                    'error' => $_FILES['gallery_images']['error'][$key],
+                    'size' => $_FILES['gallery_images']['size'][$key]
+                ];
+                $uploadedImage = uploadEventImage($file);
+                if ($uploadedImage) {
+                    $galleryImages[] = $uploadedImage;
+                }
+            }
         }
     }
+    $galleryJson = !empty($galleryImages) ? json_encode($galleryImages) : null;
+
+    // Clean up empty values
+    if (empty($endDate)) $endDate = null;
+    if (empty($latitude)) $latitude = null;
+    if (empty($longitude)) $longitude = null;
+    if (empty($virtualLink)) $virtualLink = null;
+    if (empty($chapterId)) $chapterId = null;
+    if (empty($registrationLimit)) $registrationLimit = null;
 
     try {
         $stmt = $conn->prepare("
             INSERT INTO events (
                 title, slug, description, event_type, start_date, end_date,
-                location, latitude, longitude, virtual_link, hero_image,
-                chapter_id, registration_enabled, registration_limit,
+                location, latitude, longitude, virtual_link, hero_image, gallery,
+                chapter_id, registration_enabled, registration_limit, rsvp_enabled,
                 status, featured, created_by, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ");
 
-        $stmt->execute([
+        $result = $stmt->execute([
             $title,
             $slug,
             $description,
@@ -556,41 +612,395 @@ function handleCreateEvent($conn)
             $longitude,
             $virtualLink,
             $heroImage,
+            $galleryJson,
             $chapterId,
             $registrationEnabled,
             $registrationLimit,
+            $rsvpEnabled,
             $status,
             $featured,
             $userId
         ]);
 
+        if (!$result) {
+            error_log("Execute failed: " . json_encode($stmt->errorInfo()));
+            echo json_encode(['success' => false, 'message' => 'Failed to create event']);
+            return;
+        }
+
         $eventId = $conn->lastInsertId();
+        error_log("Event created with ID: " . $eventId);
 
         // Log activity
-        $logStmt = $conn->prepare("
-            INSERT INTO activity_log (user_id, action, entity_type, entity_id, ip_address, user_agent)
-            VALUES (?, 'event_created', 'event', ?, ?, ?)
-        ");
-        $logStmt->execute([$userId, $eventId, $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '']);
+        try {
+            $logStmt = $conn->prepare("
+                INSERT INTO activity_log (user_id, action, entity_type, entity_id, ip_address, user_agent)
+                VALUES (?, 'event_created', 'event', ?, ?, ?)
+            ");
+            $logStmt->execute([$userId, $eventId, $_SERVER['REMOTE_ADDR'], $_SERVER['HTTP_USER_AGENT'] ?? '']);
+        } catch (PDOException $e) {
+            error_log("Activity log error: " . $e->getMessage());
+        }
+
+        // Send notifications to all users if enabled
+        $notificationsSent = 0;
+        if ($notifyUsers) {
+            $notificationsSent = sendEventCreatedNotifications($conn, $eventId, $title, $startDate, $location);
+        }
 
         echo json_encode([
             'success' => true,
             'message' => 'Event created successfully',
-            'event_id' => $eventId
+            'event_id' => $eventId,
+            'notifications_sent' => $notificationsSent
         ]);
     } catch (PDOException $e) {
         error_log("Create event error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Failed to create event']);
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
+}
+
+function uploadEventImage($file)
+{
+    $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (!in_array($file['type'], $allowedTypes)) {
+        error_log("Invalid image type: " . $file['type']);
+        return false;
+    }
+
+    if ($file['size'] > 5 * 1024 * 1024) {
+        error_log("Image too large: " . $file['size']);
+        return false;
+    }
+
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $filename = 'event_' . time() . '_' . uniqid() . '.' . $extension;
+    $uploadDir = __DIR__ . '/../assets/images/uploads/';
+    $uploadPath = $uploadDir . $filename;
+
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    if (move_uploaded_file($file['tmp_name'], $uploadPath)) {
+        return $filename;
+    }
+
+    return false;
+}
+
+function sendEventCreatedNotifications($conn, $eventId, $eventTitle, $startDate, $location)
+{
+    // Get all active users
+    $usersStmt = $conn->query("SELECT email, first_name FROM users WHERE status = 'active' AND email_verified = 1");
+    $users = $usersStmt->fetchAll();
+
+    if (empty($users)) {
+        return 0;
+    }
+
+    require_once __DIR__ . '/../config/mailer.php';
+    $mailer = new Mailer();
+
+    $sent = 0;
+    $eventDate = date('F j, Y \a\t g:i A', strtotime($startDate));
+
+    foreach ($users as $user) {
+        $message = '
+            <p>Hi ' . htmlspecialchars($user['first_name']) . ',</p>
+            <p>We\'re excited to announce a new event on Scribes Global!</p>
+            <div style="background: linear-gradient(135deg, rgba(107, 70, 193, 0.1) 0%, rgba(45, 156, 219, 0.1) 100%); padding: 1.5rem; border-radius: 12px; border-left: 4px solid #6B46C1; margin: 1.5rem 0;">
+                <h2 style="margin: 0 0 1rem 0; color: #1A1A2E;">' . htmlspecialchars($eventTitle) . '</h2>
+                <p style="margin: 0.5rem 0;"><strong>📅 Date:</strong> ' . $eventDate . '</p>
+                <p style="margin: 0.5rem 0;"><strong>📍 Location:</strong> ' . htmlspecialchars($location) . '</p>
+            </div>
+            <p>Don\'t miss out on this amazing opportunity! Click the button below to view event details and register.</p>
+        ';
+
+        if ($mailer->sendNotificationEmail(
+            $user['email'],
+            $user['first_name'],
+            '🎉 New Event: ' . $eventTitle,
+            $message,
+            SITE_URL . '/pages/events/details?id=' . $eventId,
+            'View Event & Register'
+        )) {
+            $sent++;
+        }
+
+        // Small delay to avoid rate limiting
+        usleep(100000); // 0.1 second
+    }
+
+    return $sent;
 }
 
 function generateSlug($text)
 {
-    // Convert to lowercase
     $text = strtolower($text);
-    // Replace non-alphanumeric characters with hyphens
     $text = preg_replace('/[^a-z0-9]+/', '-', $text);
-    // Remove leading and trailing hyphens
     $text = trim($text, '-');
     return $text;
+}
+
+
+function handleGetEventMedia($conn) {
+    $eventId = $_GET['event_id'] ?? 0;
+    
+    try {
+        $stmt = $conn->prepare("SELECT id, title, gallery, videos FROM events WHERE id = ?");
+        $stmt->execute([$eventId]);
+        $event = $stmt->fetch();
+        
+        if (!$event) {
+            echo json_encode(['success' => false, 'message' => 'Event not found']);
+            return;
+        }
+        
+        $gallery = !empty($event['gallery']) ? json_decode($event['gallery'], true) : [];
+        $videos = !empty($event['videos']) ? json_decode($event['videos'], true) : [];
+        
+        echo json_encode([
+            'success' => true,
+            'event' => $event,
+            'gallery' => $gallery,
+            'videos' => $videos
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("Get event media error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to fetch event media']);
+    }
+}
+
+function handleUploadEventGallery($conn) {
+    $eventId = $_POST['event_id'] ?? 0;
+    
+    if (empty($eventId)) {
+        echo json_encode(['success' => false, 'message' => 'Event ID is required']);
+        return;
+    }
+    
+    // Get current gallery
+    $stmt = $conn->prepare("SELECT gallery FROM events WHERE id = ?");
+    $stmt->execute([$eventId]);
+    $event = $stmt->fetch();
+    
+    if (!$event) {
+        echo json_encode(['success' => false, 'message' => 'Event not found']);
+        return;
+    }
+    
+    $currentGallery = !empty($event['gallery']) ? json_decode($event['gallery'], true) : [];
+    
+    // Check limit
+    if (count($currentGallery) >= 20) {
+        echo json_encode(['success' => false, 'message' => 'Maximum 20 photos allowed']);
+        return;
+    }
+    
+    // Upload new images
+    $newImages = [];
+    if (isset($_FILES['gallery_images'])) {
+        foreach ($_FILES['gallery_images']['tmp_name'] as $key => $tmp_name) {
+            if ($_FILES['gallery_images']['error'][$key] === UPLOAD_ERR_OK) {
+                $file = [
+                    'name' => $_FILES['gallery_images']['name'][$key],
+                    'type' => $_FILES['gallery_images']['type'][$key],
+                    'tmp_name' => $tmp_name,
+                    'error' => $_FILES['gallery_images']['error'][$key],
+                    'size' => $_FILES['gallery_images']['size'][$key]
+                ];
+                
+                $uploadedImage = uploadEventImage($file);
+                if ($uploadedImage) {
+                    $newImages[] = $uploadedImage;
+                }
+            }
+        }
+    }
+    
+    if (empty($newImages)) {
+        echo json_encode(['success' => false, 'message' => 'No images uploaded']);
+        return;
+    }
+    
+    // Merge with existing gallery
+    $updatedGallery = array_merge($currentGallery, $newImages);
+    
+    // Limit to 20
+    if (count($updatedGallery) > 20) {
+        $updatedGallery = array_slice($updatedGallery, 0, 20);
+    }
+    
+    try {
+        $updateStmt = $conn->prepare("UPDATE events SET gallery = ? WHERE id = ?");
+        $updateStmt->execute([json_encode($updatedGallery), $eventId]);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => count($newImages) . ' photo(s) uploaded successfully',
+            'gallery' => $updatedGallery
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("Upload gallery error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to update gallery']);
+    }
+}
+
+function handleDeleteEventGalleryImage($conn) {
+    $eventId = $_POST['event_id'] ?? 0;
+    $imageName = $_POST['image_name'] ?? '';
+    
+    if (empty($eventId) || empty($imageName)) {
+        echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+        return;
+    }
+    
+    try {
+        // Get current gallery
+        $stmt = $conn->prepare("SELECT gallery FROM events WHERE id = ?");
+        $stmt->execute([$eventId]);
+        $event = $stmt->fetch();
+        
+        if (!$event) {
+            echo json_encode(['success' => false, 'message' => 'Event not found']);
+            return;
+        }
+        
+        $currentGallery = !empty($event['gallery']) ? json_decode($event['gallery'], true) : [];
+        
+        // Remove image from array
+        $updatedGallery = array_filter($currentGallery, function($img) use ($imageName) {
+            return $img !== $imageName;
+        });
+        
+        // Re-index array
+        $updatedGallery = array_values($updatedGallery);
+        
+        // Update database
+        $updateStmt = $conn->prepare("UPDATE events SET gallery = ? WHERE id = ?");
+        $updateStmt->execute([json_encode($updatedGallery), $eventId]);
+        
+        // Delete physical file
+        $filePath = __DIR__ . '/../assets/images/uploads/' . $imageName;
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Photo deleted successfully'
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("Delete gallery image error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to delete photo']);
+    }
+}
+
+function handleAddEventVideo($conn) {
+    $eventId = $_POST['event_id'] ?? 0;
+    $videoUrl = $_POST['video_url'] ?? '';
+    
+    if (empty($eventId) || empty($videoUrl)) {
+        echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+        return;
+    }
+    
+    // Validate YouTube URL
+    if (!str_contains($videoUrl, 'youtube.com/embed/') && !str_contains($videoUrl, 'youtu.be')) {
+        echo json_encode(['success' => false, 'message' => 'Invalid YouTube URL']);
+        return;
+    }
+    
+    try {
+        // Get current videos
+        $stmt = $conn->prepare("SELECT videos FROM events WHERE id = ?");
+        $stmt->execute([$eventId]);
+        $event = $stmt->fetch();
+        
+        if (!$event) {
+            echo json_encode(['success' => false, 'message' => 'Event not found']);
+            return;
+        }
+        
+        $currentVideos = !empty($event['videos']) ? json_decode($event['videos'], true) : [];
+        
+        // Check limit
+        if (count($currentVideos) >= 10) {
+            echo json_encode(['success' => false, 'message' => 'Maximum 10 videos allowed']);
+            return;
+        }
+        
+        // Check if video already exists
+        if (in_array($videoUrl, $currentVideos)) {
+            echo json_encode(['success' => false, 'message' => 'This video is already added']);
+            return;
+        }
+        
+        // Add video
+        $currentVideos[] = $videoUrl;
+        
+        // Update database
+        $updateStmt = $conn->prepare("UPDATE events SET videos = ? WHERE id = ?");
+        $updateStmt->execute([json_encode($currentVideos), $eventId]);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Video added successfully',
+            'videos' => $currentVideos
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("Add video error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to add video']);
+    }
+}
+
+function handleDeleteEventVideo($conn) {
+    $eventId = $_POST['event_id'] ?? 0;
+    $videoUrl = $_POST['video_url'] ?? '';
+    
+    if (empty($eventId) || empty($videoUrl)) {
+        echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+        return;
+    }
+    
+    try {
+        // Get current videos
+        $stmt = $conn->prepare("SELECT videos FROM events WHERE id = ?");
+        $stmt->execute([$eventId]);
+        $event = $stmt->fetch();
+        
+        if (!$event) {
+            echo json_encode(['success' => false, 'message' => 'Event not found']);
+            return;
+        }
+        
+        $currentVideos = !empty($event['videos']) ? json_decode($event['videos'], true) : [];
+        
+        // Remove video from array
+        $updatedVideos = array_filter($currentVideos, function($vid) use ($videoUrl) {
+            return $vid !== $videoUrl;
+        });
+        
+        // Re-index array
+        $updatedVideos = array_values($updatedVideos);
+        
+        // Update database
+        $updateStmt = $conn->prepare("UPDATE events SET videos = ? WHERE id = ?");
+        $updateStmt->execute([json_encode($updatedVideos), $eventId]);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Video removed successfully'
+        ]);
+        
+    } catch (PDOException $e) {
+        error_log("Delete video error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to remove video']);
+    }
 }
