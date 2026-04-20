@@ -532,6 +532,42 @@ function handleCreateEvent($conn)
         return;
     }
 
+    // ✅ FIX: Convert datetime-local to MySQL format
+    // Format from input: "2024-04-15T14:30" → MySQL: "2024-04-15 14:30:00"
+    try {
+        $dateTime = new DateTime($startDate);
+        $startDate = $dateTime->format('Y-m-d H:i:s');
+        error_log("Converted start date to: " . $startDate);
+    } catch (Exception $e) {
+        error_log("Date conversion error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Invalid start date format']);
+        return;
+    }
+
+    // ✅ FIX: Convert end date if provided
+    if (!empty($endDate)) {
+        try {
+            $endDateTime = new DateTime($endDate);
+            $endDate = $endDateTime->format('Y-m-d H:i:s');
+        } catch (Exception $e) {
+            error_log("End date conversion error: " . $e->getMessage());
+            $endDate = null;
+        }
+    } else {
+        $endDate = null;
+    }
+
+    // ✅ FIX: Auto-determine status based on start_date
+    $now = new DateTime();
+    $eventDateTime = new DateTime($startDate);
+    
+    if ($eventDateTime > $now) {
+        $status = 'upcoming';
+    } else {
+        $status = 'ongoing';
+    }
+    error_log("Auto-set status to: " . $status);
+
     // Generate slug
     $slug = generateSlug($title);
 
@@ -583,7 +619,6 @@ function handleCreateEvent($conn)
     $galleryJson = !empty($galleryImages) ? json_encode($galleryImages) : null;
 
     // Clean up empty values
-    if (empty($endDate)) $endDate = null;
     if (empty($latitude)) $latitude = null;
     if (empty($longitude)) $longitude = null;
     if (empty($virtualLink)) $virtualLink = null;
@@ -629,7 +664,7 @@ function handleCreateEvent($conn)
         }
 
         $eventId = $conn->lastInsertId();
-        error_log("Event created with ID: " . $eventId);
+        error_log("Event created successfully with ID: " . $eventId . " Status: " . $status);
 
         // Log activity
         try {
@@ -652,6 +687,7 @@ function handleCreateEvent($conn)
             'success' => true,
             'message' => 'Event created successfully',
             'event_id' => $eventId,
+            'status' => $status,
             'notifications_sent' => $notificationsSent
         ]);
     } catch (PDOException $e) {
