@@ -52,4 +52,6 @@ if ($_SERVER['SERVER_NAME'] === 'localhost') {
     error_reporting(0);
     ini_set('display_errors', 0);
 }
+
+define('SHOW_SPLASH_SCREEN', false);
 ?>
