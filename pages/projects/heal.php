@@ -341,9 +341,10 @@ $pageDescription = "Project H.E.A.L — Help, Educate, and Love. Scribes Global'
 
   <?php
   $root = dirname(dirname(__DIR__));
-  include $root . '/includes/splash.php';
   include $root . '/includes/nav.php';
   ?>
+
+  <?php require_once $root . '/includes/universal-splash.php'; ?>
 
 
   <!-- ══════════════════════════════════════════

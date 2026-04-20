@@ -34,6 +34,509 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <style>
+
+
+/* =========================================
+   CHAPTERS/CAMPUSES PAGE - SCRIBES GLOBAL
+   Interactive Map Version
+   ========================================= */
+
+.chapters-hero {
+  background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+  padding: 6rem 0 4rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.chapters-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(107, 70, 193, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(45, 156, 219, 0.15) 0%, transparent 50%),
+    url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(%23grid)"/></svg>');
+}
+
+.chapters-hero-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.chapters-hero h1 {
+  font-size: 3.5rem;
+  font-family: var(--font-heading);
+  color: white;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+}
+
+.chapters-hero-description {
+  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.8;
+  margin-bottom: 2.5rem;
+}
+
+.chapters-hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  margin-top: 2rem;
+}
+
+.hero-stat {
+  text-align: center;
+}
+
+.hero-stat-value {
+  font-size: 3rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #D4AF37 0%, #F2D97A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.hero-stat-label {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+/* Map Section */
+.map-section {
+  padding: 4rem 0 6rem;
+  background: linear-gradient(180deg, #f5f7fa 0%, white 100%);
+}
+
+.section-header {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 3rem;
+}
+
+.section-tag {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  background: linear-gradient(135deg, rgba(107, 70, 193, 0.1) 0%, rgba(45, 156, 219, 0.1) 100%);
+  color: #6B46C1;
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 2.75rem;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.section-description {
+  font-size: 1.125rem;
+  color: var(--gray-600);
+  line-height: 1.8;
+}
+
+/* Map Container */
+.map-container {
+  background: white;
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin-bottom: 3rem;
+}
+
+#chaptersMap {
+  height: 600px;
+  width: 100%;
+}
+
+.map-legend {
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(107, 70, 193, 0.03) 0%, rgba(45, 156, 219, 0.03) 100%);
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--gray-700);
+  font-weight: 600;
+}
+
+.legend-marker {
+  width: 30px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+/* Custom Leaflet Popup */
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-xl);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+  margin: 1.5rem;
+  min-width: 280px;
+}
+
+.popup-header {
+  margin-bottom: 1rem;
+}
+
+.popup-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--dark-bg);
+  margin-bottom: 0.5rem;
+  font-family: var(--font-heading);
+}
+
+.popup-location {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--gray-600);
+  font-size: 0.9rem;
+}
+
+.popup-location i {
+  color: #6B46C1;
+}
+
+.popup-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-top: 2px solid var(--gray-200);
+  border-bottom: 2px solid var(--gray-200);
+  margin-bottom: 1rem;
+}
+
+.popup-info-item {
+  display: flex;
+  align-items: start;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.popup-info-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+.popup-info-icon.purple {
+  background: linear-gradient(135deg, rgba(107, 70, 193, 0.1) 0%, rgba(107, 70, 193, 0.15) 100%);
+  color: #6B46C1;
+}
+
+.popup-info-icon.gold {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.15) 100%);
+  color: #D4AF37;
+}
+
+.popup-info-icon.teal {
+  background: linear-gradient(135deg, rgba(45, 156, 219, 0.1) 0%, rgba(45, 156, 219, 0.15) 100%);
+  color: #2D9CDB;
+}
+
+.popup-info-text strong {
+  display: block;
+  color: var(--dark-bg);
+  margin-bottom: 0.25rem;
+}
+
+.popup-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.popup-btn {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  transition: all var(--transition-base);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.popup-btn-primary {
+  background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(107, 70, 193, 0.3);
+}
+
+.popup-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(107, 70, 193, 0.4);
+}
+
+.popup-btn-secondary {
+  background: white;
+  color: #6B46C1;
+  border: 2`px solid #6B46C1;
+}
+
+.popup-btn-secondary:hover {
+  background: #6B46C1;
+  color: white;
+}
+
+/* Ghana Content */
+.ghana-content {
+  padding: 4rem 0;
+  background: white;
+}
+
+.intro-text {
+  max-width: 900px;
+  margin: 0 auto 3rem;
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: var(--gray-700);
+  text-align: center;
+}
+
+/* International Section */
+.international-section {
+  background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%);
+  padding: 6rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.international-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg width="60" height="60" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid2" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(%23grid2)"/></svg>');
+}
+
+.international-section .section-tag {
+  background: rgba(212, 175, 55, 0.2);
+  color: #D4AF37;
+}
+
+.international-section .section-title,
+.international-section .section-description {
+  color: white;
+}
+
+.international-section .section-description {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.international-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.international-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-2xl);
+  padding: 3rem 2.5rem;
+  transition: all var(--transition-base);
+}
+
+.international-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(212, 175, 55, 0.4);
+  transform: translateY(-8px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.international-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.international-flag {
+  font-size: 4rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.international-card h3 {
+  font-size: 2rem;
+  font-weight: 900;
+  color: white;
+  margin: 0;
+}
+
+.international-description {
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.8;
+  margin-bottom: 2rem;
+  font-size: 1.05rem;
+}
+
+.international-contact {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.international-contact i {
+  color: #D4AF37;
+}
+
+.international-card .popup-btn {
+  width: 100%;
+}
+
+/* Join CTA */
+.join-cta {
+  padding: 6rem 0;
+  background: linear-gradient(135deg, rgba(107, 70, 193, 0.05) 0%, rgba(45, 156, 219, 0.05) 100%);
+}
+
+.cta-content {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.cta-icon {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 2rem;
+  background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: white;
+  box-shadow: 0 10px 40px rgba(107, 70, 193, 0.3);
+}
+
+.cta-content h2 {
+  font-size: 2.5rem;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+  margin-bottom: 1.5rem;
+}
+
+.cta-content p {
+  font-size: 1.25rem;
+  color: var(--gray-600);
+  line-height: 1.8;
+  margin-bottom: 2.5rem;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chapters-hero {
+    padding: 4rem 0 3rem;
+  }
+  
+  .chapters-hero h1 {
+    font-size: 2.25rem;
+  }
+  
+  .chapters-hero-stats {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .hero-stat-value {
+    font-size: 2.5rem;
+  }
+  
+  .section-title {
+    font-size: 2rem;
+  }
+  
+  #chaptersMap {
+    height: 400px;
+  }
+  
+  .map-legend {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .international-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .international-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .cta-buttons {
+    flex-direction: column;
+  }
+  
+  .cta-content h2 {
+    font-size: 1.75rem;
+  }
+}
+
+
 /* Quick Links Styles */
 .map-quick-links {
   display: flex;
@@ -225,7 +728,7 @@ require_once __DIR__ . '/../../includes/header.php';
 }
 </style>
 
-<div id="three-canvas-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none;"></div>
+<!-- <div id="three-canvas-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none;"></div> -->
 <!-- Hero Section -->
 <section class="chapters-hero">
   <div class="container">

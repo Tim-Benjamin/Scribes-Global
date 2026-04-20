@@ -49,7 +49,7 @@ $pageCSS = 'chapter-detail';
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
-<div id="three-canvas-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none;"></div>
+<!-- <div id="three-canvas-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none;"></div> -->
 
 <!-- Hero Section -->
 <section class="chapter-detail-hero">

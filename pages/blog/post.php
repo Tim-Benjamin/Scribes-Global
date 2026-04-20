@@ -1,4 +1,15 @@
 <?php
+// ============================================
+// STEP 1: Load configuration FIRST
+// ============================================
+require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../config/session.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../includes/badge-svg.php';
+
+// ============================================
+// STEP 2: Get post ID and validate
+// ============================================
 $postId = $_GET['id'] ?? 0;
 
 if (!$postId) {
@@ -6,11 +17,9 @@ if (!$postId) {
     exit;
 }
 
-require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../config/session.php';
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../includes/badge-svg.php';
-
+// ============================================
+// STEP 3: Database operations
+// ============================================
 $db = new Database();
 $conn = $db->connect();
 
@@ -86,6 +95,9 @@ $relatedStmt = $conn->prepare("
 $relatedStmt->execute([$postId, $post['category']]);
 $relatedPosts = $relatedStmt->fetchAll();
 
+// ============================================
+// STEP 3: Set page variables
+// ============================================
 $pageTitle = htmlspecialchars($post['title']) . ' - Blog - Scribes Global';
 $pageDescription = htmlspecialchars($post['excerpt']);
 $pageCSS = 'blog';
@@ -93,6 +105,7 @@ $noSplash = true;
 
 require_once __DIR__ . '/../../includes/header.php';
 ?>
+
 
 <style>
 .post-detail-container {

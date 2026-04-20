@@ -438,7 +438,7 @@ require_once __DIR__ . '/../../includes/header.php';
 }
 </style>
 
-<div id="three-canvas-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none;"></div>
+<!-- <div id="three-canvas-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none;"></div> -->
 
 <!-- Event Hero -->
 <section class="event-detail-hero">

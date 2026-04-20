@@ -59,8 +59,621 @@ $chapters = $chaptersStmt->fetchAll();
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
 <style>
-/* Page-specific inline styles */
+/* ─── Root Variables ──────────────────────────────────────────── */
+:root {
+  --primary-purple: #6B46C1;
+  --primary-gold: #D4AF37;
+  --secondary-gold-light: #F2D97A;
+  --primary-coral: #EB5757;
+  --pulse-purple: #a855f7;
+  --dark-bg: #1A1A2E;
+  --white: #FFFFFF;
+  --gray-100: #F7FAFC;
+  --gray-200: #EDF2F7;
+  --gray-600: #718096;
+  --gray-700: #4A5568;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --radius-full: 9999px;
+  --radius-2xl: 24px;
+  --radius-xl: 16px;
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Bento Hero Wrapper ──────────────────────────────────────── */
+#sg-bento-hero {
+  background: #F5F0E8;
+  padding: 3rem 1.5rem 2rem;
+  font-family: 'DM Sans', sans-serif;
+}
+
+#sg-bento-hero *,
+#sg-bento-hero *::before,
+#sg-bento-hero *::after {
+  box-sizing: border-box;
+}
+
+/* ─── Page header inside hero ─────────────────────────────────── */
+.sg-bento-header {
+  max-width: 72rem;
+  margin: 0 auto 2rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.sg-bento-header-eyebrow {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(26, 26, 26, 0.4);
+  margin: 0 0 0.25rem;
+}
+
+.sg-bento-header-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: clamp(24px, 2.8vw, 40px);
+  letter-spacing: -1px;
+  color: #1A1A1A;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.sg-bento-header-title em {
+  font-style: normal;
+  font-weight: 300;
+}
+
+.sg-bento-header-hint {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.75rem;
+  color: rgba(26, 26, 26, 0.35);
+  white-space: nowrap;
+}
+
+/* ─── Bento Grid ──────────────────────────────────────────────── */
+#sg-bento-wrap {
+  max-width: 72rem;
+  margin: 0 auto;
+  position: relative;
+}
+
+#sg-bento-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 14px;
+  height: 580px;
+}
+
+#sg-card-main  { grid-column: 1; grid-row: 1 / 3; }
+#sg-card-red   { grid-column: 2; grid-row: 1 / 2; }
+#sg-card-black { grid-column: 2; grid-row: 2 / 3; }
+#sg-card-gold  { grid-column: 3; grid-row: 1 / 3; }
+
+/* ─── Cards shared ────────────────────────────────────────────── */
+.sg-bento-card {
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  opacity: 0;
+  animation: sg-slideUp 0.55s forwards;
+  cursor: pointer;
+}
+
+.sg-bento-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.sg-bento-card:not(#sg-card-main):hover,
+#sg-card-gold:hover {
+  transform: scale(1.015);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+}
+
+@keyframes sg-slideUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+#sg-card-main  { animation-delay: 0.05s; }
+#sg-card-red   { animation-delay: 0.18s; }
+#sg-card-black { animation-delay: 0.30s; }
+#sg-card-gold  { animation-delay: 0.42s; }
+
+/* ─── Card: Main (White) ──────────────────────────────────────── */
+.sg-card-main-inner {
+  background: #fff url('<?= ASSETS_PATH ?>images/sos.jpg') center/cover;
+  background-attachment: fixed;
+  height: 100%;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+}
+
+.sg-card-main-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.88) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.sg-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(232, 221, 208, 0.95);
+  padding: 0.375rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  color: rgba(26,26,26,0.7);
+  align-self: flex-start;
+  z-index: 2;
+  position: relative;
+}
+
+.sg-pulse-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #C0392B;
+  animation: sg-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sg-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.85); }
+}
+
+.sg-card-title {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: clamp(26px, 3vw, 44px);
+  letter-spacing: -1.5px;
+  line-height: 1;
+  color: #1A1A1A;
+  margin: 0 0 1.5rem;
+  z-index: 2;
+  position: relative;
+}
+
+.sg-card-title em {
+  font-style: normal;
+  font-weight: 300;
+}
+
+.sg-btn-dark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #1A1A1A;
+  color: #F5F0E8;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-decoration: none;
+  z-index: 2;
+  position: relative;
+}
+
+.sg-btn-dark:hover { background: rgba(26,26,26,0.8); }
+
+.sg-btn-dark svg {
+  transition: transform 0.2s;
+}
+
+.sg-btn-dark:hover svg {
+  transform: translateX(3px);
+}
+
+/* Stats strip */
+.sg-stats-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  z-index: 2;
+  position: relative;
+}
+
+.sg-stat-divider {
+  width: 1px;
+  background: rgba(26,26,26,0.1);
+  align-self: stretch;
+}
+
+.sg-stat-value {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.5rem;
+  letter-spacing: -0.5px;
+  color: #1A1A1A;
+  margin: 0;
+}
+
+.sg-stat-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem;
+  color: rgba(26,26,26,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.125rem;
+}
+
+/* ─── Card: Red ───────────────────────────────────────────────── */
+.sg-card-red-inner {
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.92) 0%, rgba(192, 57, 43, 0.88) 100%), 
+              url('<?= ASSETS_PATH ?>images/exhale.png') center/cover;
+  height: 100%;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── Card: Black ─────────────────────────────────────────────── */
+.sg-card-black-inner {
+  background: linear-gradient(135deg, rgba(26, 26, 26, 0.93) 0%, rgba(26, 26, 26, 0.90) 100%), 
+              url('<?= ASSETS_PATH ?>images/TRUTH.jpg') center/cover;
+  height: 100%;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── Card: Gold ──────────────────────────────────────────────── */
+.sg-card-gold-inner {
+  background: linear-gradient(160deg, rgba(44, 24, 16, 0.94) 0%, rgba(26, 15, 8, 0.92) 100%), 
+              url('<?= ASSETS_PATH ?>images/rekindle.jpg') center/cover;
+  height: 100%;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.sg-gold-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255,255,255,0.03) 0px,
+    rgba(255,255,255,0.03) 1px,
+    transparent 1px,
+    transparent 12px
+  );
+}
+
+/* ─── Shared card text helpers ────────────────────────────────── */
+.sg-card-eyebrow {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin: 0 0 0.75rem;
+  position: relative;
+  z-index: 2;
+}
+
+.sg-card-heading {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.15;
+  margin: 0;
+  letter-spacing: -0.5px;
+  position: relative;
+  z-index: 2;
+}
+
+.sg-card-heading em {
+  font-style: normal;
+}
+
+/* Expand hint arrow */
+.sg-expand-hint {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Avatars */
+.sg-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 2px solid #1A1A1A;
+  margin-left: -10px;
+  position: relative;
+  z-index: 2;
+}
+
+.sg-avatar:first-child { margin-left: 0; }
+
+/* ─── Expanded Clone ──────────────────────────────────────────── */
+#sg-expand-clone {
+  position: absolute;
+  border-radius: 20px;
+  overflow: hidden;
+  z-index: 50;
+  pointer-events: none;
+}
+
+#sg-expand-clone.sg-settled { pointer-events: auto; }
+
+.sg-card-ghost { opacity: 0 !important; pointer-events: none; }
+
+.sg-expanded-content {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.35s 0.25s ease, transform 0.35s 0.25s ease;
+}
+
+.sg-expanded-content.sg-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sg-chart-line {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  transition: stroke-dashoffset 1.1s 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+
+.sg-chart-line.sg-drawn { stroke-dashoffset: 0; }
+
+/* Close button */
+#sg-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  border: none;
+  transition: transform 0.2s, background 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+#sg-close-btn:hover { transform: scale(1.1); }
+
+/* ─── MOBILE RESPONSIVE ───────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  #sg-bento-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    height: auto;
+    gap: 12px;
+  }
+  
+  #sg-card-main  { grid-column: 1 / 3; grid-row: 1; min-height: 280px; }
+  #sg-card-red   { grid-column: 1;     grid-row: 2; min-height: 200px; }
+  #sg-card-black { grid-column: 2;     grid-row: 2; min-height: 200px; }
+  #sg-card-gold  { grid-column: 1 / 3; grid-row: 3; min-height: 200px; }
+
+  .sg-card-main-inner { padding: 1.75rem; }
+  .sg-stats-row { flex-wrap: wrap; gap: 1rem; }
+}
+
+@media (max-width: 768px) {
+  #sg-bento-hero {
+    padding: 2rem 1rem 1.5rem;
+  }
+
+  .sg-bento-header {
+    margin: 0 auto 1.5rem;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .sg-bento-header-hint {
+    display: none;
+  }
+
+  #sg-bento-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 10px;
+  }
+
+  #sg-card-main,
+  #sg-card-red,
+  #sg-card-black,
+  #sg-card-gold  { 
+    grid-column: 1; 
+    grid-row: auto; 
+    min-height: 220px; 
+  }
+
+  #sg-card-main { min-height: 260px; }
+
+  .sg-card-main-inner {  
+    padding: 1.5rem; 
+  }
+
+  .sg-card-red-inner,
+  .sg-card-black-inner,
+  .sg-card-gold-inner {
+    padding: 1.25rem;
+  }
+
+  .sg-card-title {
+    font-size: clamp(20px, 2.5vw, 28px);
+    margin-bottom: 1rem;
+  }
+
+  .sg-card-heading {
+    font-size: clamp(16px, 2vw, 22px);
+  }
+
+  .sg-btn-dark {
+    padding: 0.65rem 1.25rem;
+    font-size: 0.8rem;
+  }
+
+  .sg-stats-row {
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+  }
+
+  .sg-stat-value {
+    font-size: 1.25rem;
+  }
+
+  .sg-pill-badge {
+    font-size: 0.7rem;
+    padding: 0.35rem 0.9rem;
+  }
+
+  .sg-card-eyebrow {
+    font-size: 0.65rem;
+  }
+
+  .sg-expand-hint {
+    width: 24px;
+    height: 24px;
+    bottom: 12px;
+    right: 12px;
+  }
+
+  .sg-expand-hint svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  p[style*="text-align:center"] {
+    font-size: 0.8rem;
+    margin-top: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #sg-bento-hero {
+    padding: 1.5rem 0.75rem 1rem;
+  }
+
+  .sg-bento-header {
+    margin: 0 auto 1rem;
+  }
+
+  .sg-bento-header-title {
+    font-size: clamp(20px, 2.2vw, 24px);
+  }
+
+  .sg-bento-header-eyebrow {
+    font-size: 0.65rem;
+  }
+
+  #sg-bento-grid {
+    gap: 8px;
+  }
+
+  #sg-card-main { min-height: 240px; }
+  #sg-card-red,
+  #sg-card-black,
+  #sg-card-gold { min-height: 180px; }
+
+  .sg-card-main-inner,
+  .sg-card-red-inner,
+  .sg-card-black-inner,
+  .sg-card-gold-inner {
+    padding: 1rem;
+  }
+
+  .sg-card-title {
+    font-size: clamp(18px, 2vw, 22px);
+    margin-bottom: 0.75rem;
+  }
+
+  .sg-card-heading {
+    font-size: clamp(14px, 1.8vw, 18px);
+  }
+
+  .sg-btn-dark {
+    padding: 0.6rem 1rem;
+    font-size: 0.75rem;
+  }
+
+  .sg-stats-row {
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .sg-stat-value {
+    font-size: 1.1rem;
+  }
+
+  .sg-stat-label {
+    font-size: 0.6rem;
+  }
+
+  .sg-pill-badge {
+    font-size: 0.65rem;
+    padding: 0.3rem 0.8rem;
+  }
+}
+
+/* ─── Other page styles ────────────────────────────────────────── */
 .countdown-timer {
   display: flex;
   gap: 1rem;
@@ -68,9 +681,7 @@ require_once __DIR__ . '/../../includes/header.php';
   margin: 1rem 0;
 }
 
-.countdown-item {
-  text-align: center;
-}
+.countdown-item { text-align: center; }
 
 .countdown-value {
   font-size: 2rem;
@@ -84,841 +695,514 @@ require_once __DIR__ . '/../../includes/header.php';
   color: var(--gray-600);
   text-transform: uppercase;
 }
-
-/* Hero Carousel Styles */
-.events-hero {
-  position: relative;
-  height: 80vh;
-  min-height: 600px;
-  overflow: hidden;
-  padding: 0;
-  margin-bottom: 2rem;
-}
-
-.hero-carousel-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.hero-carousel {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.carousel-slide {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.8s ease-in-out, visibility 0.8s ease-in-out;
-}
-
-.carousel-slide.active {
-  opacity: 1;
-  visibility: visible;
-}
-
-.carousel-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
-
-.carousel-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(106, 13, 173, 0.9) 0%, rgba(0, 0, 0, 0.7) 100%);
-  z-index: 1;
-}
-
-.carousel-content {
-  position: relative;
-  z-index: 2;
-  color: white;
-  padding-top: 100px;
-  max-width: 800px;
-  margin: 0 auto;
-  text-align: center;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
-.carousel-tag {
-  display: inline-block;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 0.5rem 1rem;
-  border-radius: 30px;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 1rem;
-  backdrop-filter: blur(5px);
-}
-
-.carousel-title {
-  font-size: 4rem;
-  font-weight: 900;
-  margin-bottom: 1rem;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-  line-height: 1.2;
-}
-
-.carousel-description {
-  font-size: 1.125rem;
-  margin-bottom: 1.5rem;
-  opacity: 0.9;
-  max-width: 600px;
-  line-height: 1.8;
-}
-
-.carousel-meta {
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.carousel-meta span {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.15);
-  padding: 0.5rem 1rem;
-  border-radius: 30px;
-  backdrop-filter: blur(5px);
-}
-
-.carousel-meta i {
-  color: var(--primary-purple-light, #c084fc);
-}
-
-/* Carousel Controls */
-.carousel-control {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 50px;
-  height: 50px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
-  z-index: 10;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(5px);
-}
-
-.carousel-control:hover {
-  background: white;
-  color: var(--primary-purple);
-  border-color: white;
-}
-
-.carousel-control.prev {
-  left: 30px;
-}
-
-.carousel-control.next {
-  right: 30px;
-}
-
-/* Carousel Indicators */
-.carousel-indicators {
-  position: absolute;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 12px;
-  z-index: 10;
-}
-
-.indicator {
-  width: 40px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.indicator.active {
-  background: white;
-  width: 60px;
-}
-
-.indicator:hover {
-  background: rgba(255, 255, 255, 0.6);
-}
-
-/* Pause/Play Button */
-.carousel-pause {
-  position: absolute;
-  bottom: 30px;
-  right: 30px;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  color: white;
-  cursor: pointer;
-  z-index: 10;
-  backdrop-filter: blur(5px);
-  transition: all 0.3s ease;
-}
-
-.carousel-pause:hover {
-  background: white;
-  color: var(--primary-purple);
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .events-hero {
-    height: 70vh;
-    min-height: 500px;
-  }
-  
-  .carousel-title {
-    font-size: 2.5rem;
-  }
-  
-  .carousel-description {
-    font-size: 1rem;
-  }
-  
-  .carousel-meta {
-    gap: 1rem;
-  }
-  
-  .carousel-meta span {
-    font-size: 0.875rem;
-    padding: 0.3rem 0.8rem;
-  }
-  
-  .carousel-control {
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
-  }
-  
-  .carousel-control.prev {
-    left: 15px;
-  }
-  
-  .carousel-control.next {
-    right: 15px;
-  }
-  
-  .indicator {
-    width: 30px;
-  }
-  
-  .indicator.active {
-    width: 45px;
-  }
-}
-
-@media (max-width: 480px) {
-  .carousel-title {
-    font-size: 2rem;
-  }
-  
-  .carousel-meta {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-}
-
-
-
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&display=swap');
-
-/* ── CSS Variables ────────────────────────────────────────── */
-:root {
-  --pp: #6A0DAD;
-  --pp-deep: #3d0070;
-  --pp-light: #c084fc;
-  --gold: #f5c842;
-  --cream: #faf7f2;
-  --hero-h: 95vh;
-}
-
-/* ── Hero Wrapper ─────────────────────────────────────────── */
-.events-hero {
-  position: relative;
-  height: var(--hero-h);
-  min-height: 640px;
-  overflow: hidden;
-  margin-bottom: 3rem;
-}
-
-/* ── Slide Stack ──────────────────────────────────────────── */
-.hc-track {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.hc-slide {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  opacity: 0;
-  pointer-events: none;
-  transition: none;
-}
-
-.hc-slide.entering  { animation: slideEnter .85s cubic-bezier(.77,0,.18,1) forwards; }
-.hc-slide.leaving   { animation: slideLeave .85s cubic-bezier(.77,0,.18,1) forwards; }
-.hc-slide.active    { opacity: 1; pointer-events: auto; }
-
-@keyframes slideEnter {
-  from { opacity: 0; transform: translateX(60px) scale(.97); }
-  to   { opacity: 1; transform: translateX(0) scale(1); }
-}
-@keyframes slideLeave {
-  from { opacity: 1; transform: translateX(0) scale(1); }
-  to   { opacity: 0; transform: translateX(-60px) scale(.97); }
-}
-
-/* ── Left Panel (text) ────────────────────────────────────── */
-.hc-left {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 6rem 5rem 6rem 7vw;
-  background: #0a0010;
-  overflow: hidden;
-  z-index: 1;
-}
-
-/* Animated noise grain */
-.hc-left::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
-  background-size: 200px;
-  opacity: .35;
-  pointer-events: none;
-}
-
-/* Glowing orb behind text */
-.hc-left::after {
-  content: '';
-  position: absolute;
-  width: 500px;
-  height: 500px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(106,13,173,.55) 0%, transparent 70%);
-  bottom: -100px;
-  left: -80px;
-  pointer-events: none;
-}
-
-.hc-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: .72rem;
-  font-weight: 500;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 1.4rem;
-  position: relative;
-}
-.hc-tag::before {
-  content: '';
-  display: block;
-  width: 28px;
-  height: 2px;
-  background: var(--gold);
-  flex-shrink: 0;
-}
-
-.hc-title {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: clamp(2.8rem, 5vw, 5rem);
-  font-weight: 900;
-  line-height: 1.05;
-  color: #fff;
-  margin: 0 0 1.4rem;
-  letter-spacing: -.02em;
-  position: relative;
-}
-
-.hc-title em {
-  font-style: normal;
-  color: var(--pp-light);
-}
-
-.hc-desc {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 1rem;
-  line-height: 1.85;
-  color: rgba(255,255,255,.62);
-  max-width: 480px;
-  margin-bottom: 2rem;
-  position: relative;
-}
-
-.hc-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .6rem;
-  margin-bottom: 2.4rem;
-  position: relative;
-}
-.hc-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: .4rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: .8rem;
-  color: rgba(255,255,255,.75);
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.1);
-  padding: .35rem .85rem;
-  border-radius: 100px;
-  backdrop-filter: blur(4px);
-}
-.hc-pill i { color: var(--pp-light); font-size: .75rem; }
-
-.hc-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: .7rem;
-  font-family: 'DM Sans', sans-serif;
-  font-size: .9rem;
-  font-weight: 500;
-  color: #000;
-  background: var(--gold);
-  padding: .85rem 2rem;
-  border-radius: 100px;
-  text-decoration: none;
-  position: relative;
-  transition: transform .25s, box-shadow .25s;
-  width: fit-content;
-}
-.hc-cta::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 100px;
-  background: white;
-  opacity: 0;
-  transition: opacity .25s;
-}
-.hc-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(245,200,66,.35); }
-.hc-cta:hover::after { opacity: .08; }
-.hc-cta i { font-size: .8rem; transition: transform .25s; }
-.hc-cta:hover i { transform: translateX(4px); }
-
-/* ── Right Panel (image) ──────────────────────────────────── */
-.hc-right {
-  position: relative;
-  overflow: hidden;
-}
-
-.hc-img {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center;
-  transform: scale(1.08);
-  transition: transform 6s ease;
-}
-.hc-slide.active .hc-img { transform: scale(1); }
-
-/* Dark-to-transparent vignette on the left edge of the image */
-.hc-right::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, #0a0010 0%, transparent 35%);
-  z-index: 1;
-  pointer-events: none;
-}
-
-/* Diagonal decorative stripe */
-.hc-stripe {
-  position: absolute;
-  top: 0;
-  left: -40px;
-  width: 80px;
-  height: 100%;
-  background: linear-gradient(180deg, var(--pp) 0%, var(--pp-deep) 100%);
-  clip-path: polygon(40px 0, 100% 0, calc(100% - 40px) 100%, 0 100%);
-  z-index: 2;
-  opacity: .85;
-}
-
-/* Floating event number chip */
-.hc-chip {
-  position: absolute;
-  bottom: 2.5rem;
-  right: 2.5rem;
-  z-index: 3;
-  background: rgba(10,0,16,.8);
-  border: 1px solid rgba(255,255,255,.12);
-  backdrop-filter: blur(16px);
-  border-radius: 16px;
-  padding: 1.2rem 1.5rem;
-  color: white;
-  font-family: 'DM Sans', sans-serif;
-  text-align: center;
-  min-width: 110px;
-}
-.hc-chip-num {
-  display: block;
-  font-family: 'Playfair Display', serif;
-  font-size: 2.8rem;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--gold);
-}
-.hc-chip-label {
-  font-size: .72rem;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.5);
-}
-
-/* ── Progress Bar ─────────────────────────────────────────── */
-.hc-progress-rail {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: rgba(255,255,255,.08);
-  z-index: 20;
-}
-.hc-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, var(--pp-light), var(--gold));
-  width: 0%;
-  transition: width linear;
-}
-
-/* ── Navigation ───────────────────────────────────────────── */
-.hc-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: .6rem;
-  left: calc(50% - 28px);  /* sits on the seam between panels */
-}
-
-.hc-nav-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,.22);
-  background: rgba(10,0,16,.6);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: background .25s, border-color .25s, transform .2s;
-  font-size: .9rem;
-}
-.hc-nav-btn:hover {
-  background: var(--pp);
-  border-color: var(--pp);
-  transform: scale(1.1);
-}
-
-/* ── Dot Indicators ───────────────────────────────────────── */
-.hc-dots {
-  position: absolute;
-  left: 7vw;
-  bottom: 2rem;
-  display: flex;
-  gap: .5rem;
-  z-index: 20;
-}
-.hc-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.25);
-  cursor: pointer;
-  transition: all .3s;
-}
-.hc-dot.active {
-  background: var(--gold);
-  transform: scale(1.4);
-}
-
-/* ── Slide Counter ────────────────────────────────────────── */
-.hc-counter {
-  position: absolute;
-  right: 2.5rem;
-  top: 2rem;
-  z-index: 20;
-  font-family: 'DM Sans', sans-serif;
-  font-size: .8rem;
-  color: rgba(255,255,255,.4);
-}
-.hc-counter strong {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.6rem;
-  color: rgba(255,255,255,.9);
-  vertical-align: middle;
-  line-height: 1;
-}
-
-/* ── Pause Button ─────────────────────────────────────────── */
-.hc-pause {
-  position: absolute;
-  right: 2.5rem;
-  bottom: 1.5rem;
-  z-index: 20;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,.18);
-  background: rgba(10,0,16,.5);
-  color: rgba(255,255,255,.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: all .25s;
-  font-size: .75rem;
-}
-.hc-pause:hover { color: white; border-color: white; }
-
-/* ── Stagger animation on text elements when slide activates ─ */
-.hc-slide.entering .hc-tag,
-.hc-slide.entering .hc-title,
-.hc-slide.entering .hc-desc,
-.hc-slide.entering .hc-pills,
-.hc-slide.entering .hc-cta {
-  animation: textReveal .6s cubic-bezier(.22,1,.36,1) both;
-}
-.hc-slide.entering .hc-title  { animation-delay: .1s; }
-.hc-slide.entering .hc-desc   { animation-delay: .18s; }
-.hc-slide.entering .hc-pills  { animation-delay: .24s; }
-.hc-slide.entering .hc-cta    { animation-delay: .32s; }
-
-@keyframes textReveal {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ── Responsive ───────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .hc-slide { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
-  .hc-left  { padding: 3rem 2rem 2rem; justify-content: flex-end; }
-  .hc-right { grid-row: 1; }
-  .hc-right::before { background: linear-gradient(0deg, #0a0010 0%, transparent 50%); }
-  .hc-stripe { display: none; }
-  .hc-nav { left: 50%; transform: translate(-50%, -50%); flex-direction: row; }
-  .hc-dots { left: 50%; transform: translateX(-50%); }
-  .hc-chip { bottom: calc(50% + 1rem); right: 1.5rem; }
-  .events-hero { height: 100vh; }
-}
-
-@media (max-width: 480px) {
-  .hc-title { font-size: 2.2rem; }
-  .hc-left { padding: 2rem 1.5rem 2rem; }
-}
 </style>
 
-<!-- Hero Section
-<section class="events-hero">
-  <div class="container events-hero-content" data-aos="fade-up">
-    <h1 class="events-hero-title">Upcoming Events</h1>
-    <p class="events-hero-subtitle">
-      Join us for powerful gatherings, worship nights, creative workshops, and community events
-    </p>
+<!-- ══ BENTO HERO ════════════════════════════════════════════════ -->
+<section id="sg-bento-hero">
+
+  <!-- Header -->
+  <div class="sg-bento-header">
+    <div>
+      <p class="sg-bento-header-eyebrow">Scribes Global</p>
+      <h1 class="sg-bento-header-title">
+        Our <em>Events</em>
+      </h1>
+    </div>
+    <p class="sg-bento-header-hint">Click any card to explore ↗</p>
   </div>
 
-  In the hero section, after the subtitle
-<div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
-  <a href="<?= SITE_URL ?>/pages/events" class="btn btn-primary">
-    <i class="fas fa-calendar-alt"></i> Upcoming Events
-  </a>
-  <a href="<?= SITE_URL ?>/pages/events/past" class="btn btn-outline" style="color: white; border-color: white;">
-    <i class="fas fa-history"></i> Past Events
-  </a>
-</div>
-</section> -->
+  <!-- Bento grid wrapper -->
+  <div id="sg-bento-wrap">
+    <div id="sg-bento-grid">
 
-<!-- ═══ HERO SECTION ═══════════════════════════════════════════ -->
- <div id="three-canvas-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none;"></div>
-<section class="events-hero">
+      <!-- ══ CARD 1: WHITE — Scripts on Scrolls ════════════════ -->
+      <div id="sg-card-main" class="sg-bento-card"
+           data-sg-expandable="true"
+           data-sg-expand-bg="#FFFFFF"
+           data-sg-expand-bg-image="<?= ASSETS_PATH ?>images/events/scripts-on-scrolls.jpg"
+           data-sg-expand-theme="white">
+        <div class="sg-card-main-inner">
 
-  <!-- Slide Track -->
-  <div class="hc-track" id="hcTrack">
+          <div class="sg-pill-badge">
+            <span class="sg-pulse-dot"></span>
+            Annual Initiative · September
+          </div>
 
-    <!-- ── Slide 1: Scripts on Scrolls ── -->
-    <div class="hc-slide active" data-index="0">
-      <div class="hc-left">
-        <span class="hc-tag">Annual Initiative</span>
-        <h2 class="hc-title">Scripts on<br><em>Scrolls</em></h2>
-        <p class="hc-desc">An annual initiative of Scribes Poetry organized in September at Accra, Ghana. Harboring young talents, all chapters and ministries propagating the gospel through poetry, spoken word, and worship.</p>
-        <div class="hc-pills">
-          <span class="hc-pill"><i class="fas fa-calendar-alt"></i> September 2024</span>
-          <span class="hc-pill"><i class="fas fa-map-marker-alt"></i> Accra, Ghana</span>
-          <span class="hc-pill"><i class="fas fa-users"></i> All Chapters</span>
+          <div>
+            <h2 class="sg-card-title">
+              Scripts on<br/>
+              <em>Scrolls</em>
+            </h2>
+            <button id="sg-main-cta" class="sg-btn-dark">
+              Discover More
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M1 7h12M7 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Stats -->
+          <div class="sg-stats-row">
+            <div>
+              <p class="sg-stat-value">Sept</p>
+              <p class="sg-stat-label">Annually held</p>
+            </div>
+            <div class="sg-stat-divider"></div>
+            <div>
+              <p class="sg-stat-value">Accra</p>
+              <p class="sg-stat-label">Ghana</p>
+            </div>
+            <div class="sg-stat-divider"></div>
+            <div>
+              <p class="sg-stat-value">All</p>
+              <p class="sg-stat-label">Chapters welcome</p>
+            </div>
+          </div>
+
         </div>
-        <a href="<?= SITE_URL ?>/pages/events/scripts-on-scrolls" class="hc-cta">
-          Discover More <i class="fas fa-arrow-right"></i>
-        </a>
+      </div><!-- /sg-card-main -->
+
+
+      <!-- ══ CARD 2: RED — Exhale ═══════════════════════════════ -->
+      <div id="sg-card-red" class="sg-bento-card"
+           data-sg-expandable="true"
+           data-sg-expand-bg="#C0392B"
+           data-sg-expand-bg-image="<?= ASSETS_PATH ?>images/events/exhale-bg.jpg"
+           data-sg-expand-theme="light">
+        <div class="sg-card-red-inner">
+
+          <div>
+            <p class="sg-card-eyebrow" style="color:rgba(255,255,255,0.7);">Commemorative Event</p>
+            <h2 class="sg-card-heading" style="color:#fff; font-size:clamp(18px,1.8vw,26px);">
+              Exhale
+            </h2>
+          </div>
+
+          <div class="sg-expand-hint" style="background:rgba(255,255,255,0.2);">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 10L10 2M10 2H4M10 2v6" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+        </div>
+      </div><!-- /sg-card-red -->
+
+
+      <!-- ══ CARD 3: BLACK — The T.R.U.T.H ═════════════════════ -->
+      <div id="sg-card-black" class="sg-bento-card"
+           data-sg-expandable="true"
+           data-sg-expand-bg="#1A1A1A"
+           data-sg-expand-bg-image="<?= ASSETS_PATH ?>images/events/truth-bg.jpg"
+           data-sg-expand-theme="dark">
+        <div class="sg-card-black-inner">
+
+          <div>
+            <p class="sg-card-eyebrow" style="color:rgba(255,255,255,0.4);">Tri-Annual Bible Study</p>
+            <h2 class="sg-card-heading" style="color:#fff; font-size:clamp(16px,1.6vw,22px);">
+              The <em>T.R.U.T.H</em>
+            </h2>
+          </div>
+
+          <div>
+            <div style="display:flex; position: relative; z-index: 2;">
+              <div class="sg-avatar" style="background:linear-gradient(135deg,#34d399,#059669);">M</div>
+              <div class="sg-avatar" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);">J</div>
+              <div class="sg-avatar" style="background:linear-gradient(135deg,#fb923c,#ea580c);">N</div>
+              <div class="sg-avatar" style="background:rgba(255,255,255,0.1);">+</div>
+            </div>
+            <p style="color:rgba(255,255,255,0.4); font-size:0.7rem; font-family:'DM Sans',sans-serif; margin-top:0.5rem; position: relative; z-index: 2;">Mar · Jul · Nov</p>
+          </div>
+
+          <div class="sg-expand-hint" style="background:rgba(255,255,255,0.1);">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 10L10 2M10 2H4M10 2v6" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+        </div>
+      </div><!-- /sg-card-black -->
+
+
+      <!-- ══ CARD 4: GOLD — Rekindle ═══════════════════════════ -->
+      <div id="sg-card-gold" class="sg-bento-card"
+           data-sg-expandable="true"
+           data-sg-expand-bg="#2C1810"
+           data-sg-expand-bg-image="<?= ASSETS_PATH ?>images/events/rekindle-bg.jpg"
+           data-sg-expand-theme="dark">
+        <div class="sg-card-gold-inner">
+          <div class="sg-gold-lines"></div>
+
+          <div style="position:relative; z-index:1;">
+            <p class="sg-card-eyebrow" style="color:rgba(251,191,36,0.7);">Intimate Worship</p>
+            <h2 class="sg-card-heading" style="color:#fef3c7; font-size:clamp(18px,1.8vw,26px);">
+              Rekindle
+            </h2>
+          </div>
+
+          <div class="sg-expand-hint" style="background:rgba(251,191,36,0.2);">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M2 10L10 2M10 2H4M10 2v6" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+        </div>
+      </div><!-- /sg-card-gold -->
+
+    </div><!-- /sg-bento-grid -->
+  </div><!-- /sg-bento-wrap -->
+
+  <p style="text-align:center; color:rgba(26,26,26,0.35); font-size:0.875rem; font-family:'DM Sans',sans-serif; margin-top:1.5rem;">
+    Click any card to explore each event ↑
+  </p>
+
+</section><!-- /#sg-bento-hero -->
+
+
+<!-- ══ EXPANDED CONTENT TEMPLATES ════════════════════════════════ -->
+
+<template id="sg-tpl-card-main">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:2.5rem;padding-top:3.5rem;background-image: url('<?= ASSETS_PATH ?>images/sos.jpg'); background-size: cover; background-position: center;">
+    <div style="position:absolute;inset:0;background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.92) 100%); z-index: 0;"></div>
+    <div class="sg-expanded-content" style="position: relative; z-index: 1;">
+      <p style="color:rgba(26,26,26,0.5);font-size:0.875rem;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 0.25rem;">Annual Initiative</p>
+      <h2 style="font-family:var(--font-heading);font-weight:600;font-size:clamp(28px,3.5vw,52px);letter-spacing:-1.5px;line-height:1.05;color:#1A1A1A;margin:0 0 0.5rem;">
+        Scripts on<br/><span style="font-weight:300;">Scrolls</span>
+      </h2>
+      <p style="color:rgba(26,26,26,0.55);font-family:'DM Sans',sans-serif;font-size:0.875rem;max-width:32rem;line-height:1.7;margin:0 0 2rem;">
+        An annual initiative of Scribes Poetry organized in September at Accra, Ghana. Harboring young talents, all chapters and ministries propagating the gospel through poetry, spoken word, and worship.
+      </p>
+    </div>
+    <div class="sg-expanded-content" style="flex:1;position:relative;border-radius:1rem;overflow:hidden;background:#F5F0E8; z-index: 1;">
+      <img 
+        src="<?= ASSETS_PATH ?>images/events/scripts-on-scrolls-detailed.jpg"
+        alt="Scripts on Scrolls"
+        style="width:100%;height:100%;object-fit:cover;"
+        onerror="this.style.display='none'"
+      >
+    </div>
+    <div class="sg-expanded-content" style="display:flex;gap:2rem;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid rgba(26,26,26,0.1);align-items:flex-end; position: relative; z-index: 1;">
+      <div>
+        <p style="font-family:var(--font-heading);font-weight:600;font-size:1.5rem;letter-spacing:-0.5px;color:#1A1A1A;margin:0;">September</p>
+        <p style="color:rgba(26,26,26,0.4);font-size:0.7rem;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin:0.125rem 0 0;">Annual date</p>
       </div>
-      <div class="hc-right">
-        <div class="hc-img" style="background-image: url('<?= ASSETS_PATH ?>/images/sos.jpg');"></div>
-        <div class="hc-stripe"></div>
-        <div class="hc-chip">
-          <span class="hc-chip-num">01</span>
-          <span class="hc-chip-label">Event</span>
-        </div>
+      <div>
+        <p style="font-family:var(--font-heading);font-weight:600;font-size:1.5rem;letter-spacing:-0.5px;color:#1A1A1A;margin:0;">All chapters</p>
+        <p style="color:rgba(26,26,26,0.4);font-size:0.7rem;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin:0.125rem 0 0;">Open to all</p>
+      </div>
+      <div>
+        <p style="font-family:var(--font-heading);font-weight:600;font-size:1.5rem;letter-spacing:-0.5px;color:#1A1A1A;margin:0;">Poetry + Worship</p>
+        <p style="color:rgba(26,26,26,0.4);font-size:0.7rem;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin:0.125rem 0 0;">Format</p>
+      </div>
+      <div style="margin-left:auto;">
+        <button class="sg-btn-dark">Learn More →</button>
       </div>
     </div>
+  </div>
+</template>
 
-    <!-- ── Slide 2: Exhale ── -->
-    <div class="hc-slide" data-index="1">
-      <div class="hc-left">
-        <span class="hc-tag">Commemorative Event</span>
-        <h2 class="hc-title">Exhale</h2>
-        <p class="hc-desc">Commemorating Ghana's Independence Day, Scribes came together to speak about freedom in Christ. Highlighting mental health awareness and depression, climaxed with medleys of music and testimonies.</p>
-        <div class="hc-pills">
-          <span class="hc-pill"><i class="fas fa-calendar-alt"></i> March 6, 2024</span>
-          <span class="hc-pill"><i class="fas fa-flag"></i> Independence Celebration</span>
-          <span class="hc-pill"><i class="fas fa-heart"></i> Mental Health</span>
-        </div>
-        <a href="<?= SITE_URL ?>/pages/events/exhale" class="hc-cta">
-          Discover More <i class="fas fa-arrow-right"></i>
-        </a>
+<template id="sg-tpl-card-red">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:2.5rem;padding-top:3.5rem;background-image: url('<?= ASSETS_PATH ?>images/exhale.png'); background-size: cover; background-position: center;">
+    <div style="position:absolute;inset:0;background: linear-gradient(135deg, rgba(192, 57, 43, 0.94) 0%, rgba(192, 57, 43, 0.92) 100%); z-index: 0;"></div>
+    <div class="sg-expanded-content" style="position: relative; z-index: 1;">
+      <p style="color:rgba(255,255,255,0.6);font-size:0.875rem;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 0.25rem;">Commemorative Event</p>
+      <h2 style="font-family:var(--font-heading);font-weight:600;font-size:clamp(28px,3.5vw,52px);letter-spacing:-1.5px;line-height:1.05;color:#fff;margin:0 0 0.5rem;">
+        Exhale
+      </h2>
+      <p style="color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;font-size:0.875rem;max-width:32rem;line-height:1.7;margin:0 0 1.5rem;">
+        Commemorating Ghana's Independence Day, Scribes came together to speak about freedom in Christ — highlighting mental health awareness and depression, climaxed with medleys of music and testimonies.
+      </p>
+    </div>
+    <div class="sg-expanded-content" style="flex:1;position:relative; z-index: 1;">
+      <svg viewBox="0 0 580 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;position:absolute;inset:0;">
+        <line x1="0" y1="160" x2="580" y2="160" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <line x1="0" y1="120" x2="580" y2="120" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <line x1="0" y1="80"  x2="580" y2="80"  stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <line x1="0" y1="40"  x2="580" y2="40"  stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+        <polygon points="0,160 70,140 140,148 230,100 320,115 410,55 500,70 580,60 580,200 0,200"
+                 fill="rgba(255,255,255,0.08)"/>
+        <polyline class="sg-chart-line"
+                  points="0,160 70,140 140,148 230,100 320,115 410,55 500,70 580,60"
+                  stroke="white" stroke-width="3"
+                  stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="410" cy="55" r="6" fill="white"/>
+      </svg>
+    </div>
+    <div class="sg-expanded-content" style="display:flex;gap:2rem;margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,0.15);align-items:flex-end; position: relative; z-index: 1;">
+      <div>
+        <p style="font-family:var(--font-heading);font-weight:600;font-size:1.5rem;letter-spacing:-0.5px;color:#fff;margin:0;">March 6</p>
+        <p style="color:rgba(255,255,255,0.45);font-size:0.7rem;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin:0.125rem 0 0;">Independence Day</p>
       </div>
-      <div class="hc-right">
-        <div class="hc-img" style="background-image: url('<?= ASSETS_PATH ?>/images/exhale.png');"></div>
-        <div class="hc-stripe"></div>
-        <div class="hc-chip">
-          <span class="hc-chip-num">02</span>
-          <span class="hc-chip-label">Event</span>
-        </div>
+      <div>
+        <p style="font-family:var(--font-heading);font-weight:600;font-size:1.5rem;letter-spacing:-0.5px;color:#fff;margin:0;">Mental Health</p>
+        <p style="color:rgba(255,255,255,0.45);font-size:0.7rem;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin:0.125rem 0 0;">Core theme</p>
+      </div>
+      <div>
+        <p style="font-family:var(--font-heading);font-weight:600;font-size:1.5rem;letter-spacing:-0.5px;color:#fff;margin:0;">Freedom</p>
+        <p style="color:rgba(255,255,255,0.45);font-size:0.7rem;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin:0.125rem 0 0;">In Christ</p>
+      </div>
+      <div style="margin-left:auto;">
+        <button style="background:#fff;color:#C0392B;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:500;padding:0.75rem 1.5rem;border-radius:9999px;border:none;cursor:pointer;">Explore Event →</button>
       </div>
     </div>
+  </div>
+</template>
 
-    <!-- ── Slide 3: The TRUTH ── -->
-    <div class="hc-slide" data-index="2">
-      <div class="hc-left">
-        <span class="hc-tag">Tri-Annual Bible Study</span>
-        <h2 class="hc-title">The <em>T.R.U.T.H</em></h2>
-        <p class="hc-desc">A tri-annual Bible feast aimed at deepening knowledge of the Word. Take it, Read it, Understand it, Teach it and Heed it — organized in March, July &amp; November.</p>
-        <div class="hc-pills">
-          <span class="hc-pill"><i class="fas fa-calendar-alt"></i> March · July · Nov</span>
-          <span class="hc-pill"><i class="fas fa-bible"></i> Bible Study</span>
-          <span class="hc-pill"><i class="fas fa-users"></i> Open to Public</span>
-        </div>
-        <a href="<?= SITE_URL ?>/pages/events/the-truth" class="hc-cta">
-          Discover More <i class="fas fa-arrow-right"></i>
-        </a>
-      </div>
-      <div class="hc-right">
-        <div class="hc-img" style="background-image: url('<?= ASSETS_PATH ?>/images/TRUTH.jpg');"></div>
-        <div class="hc-stripe"></div>
-        <div class="hc-chip">
-          <span class="hc-chip-num">03</span>
-          <span class="hc-chip-label">Event</span>
-        </div>
-      </div>
+<template id="sg-tpl-card-black">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:2.5rem;padding-top:3.5rem;overflow:hidden;background-image: url('<?= ASSETS_PATH ?>images/TRUTH.jpg'); background-size: cover; background-position: center;">
+    <div style="position:absolute;inset:0;background: linear-gradient(135deg, rgba(26, 26, 26, 0.94) 0%, rgba(26, 26, 26, 0.92) 100%); z-index: 0;"></div>
+    <div class="sg-expanded-content" style="position:relative;z-index:1;">
+      <p style="color:rgba(255,255,255,0.5);font-size:0.875rem;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 0.25rem;">Tri-Annual Bible Study</p>
+      <h2 style="font-family:var(--font-heading);font-weight:600;font-size:clamp(26px,3vw,48px);letter-spacing:-1.5px;line-height:1.05;color:#fff;margin:0 0 1rem;">
+        The <em style="font-style:normal;">T.R.U.T.H</em>
+      </h2>
+      <p style="color:rgba(255,255,255,0.45);font-family:'DM Sans',sans-serif;font-size:0.875rem;max-width:18rem;line-height:1.7;margin:0;">
+        Take it. Read it. Understand it. Teach it. Heed it. — A tri-annual Bible feast aimed at deepening knowledge of the Word.
+      </p>
     </div>
-
-    <!-- ── Slide 4: Rekindle ── -->
-    <div class="hc-slide" data-index="3">
-      <div class="hc-left">
-        <span class="hc-tag">Intimate Worship</span>
-        <h2 class="hc-title">Rekindle</h2>
-        <p class="hc-desc">An intimate worship experience geared at revival and repositioning. Intentional worship where the spontaneous happens — reigniting dwindled fire at the start of each year.</p>
-        <div class="hc-pills">
-          <span class="hc-pill"><i class="fas fa-calendar-alt"></i> Early 2024</span>
-          <span class="hc-pill"><i class="fas fa-music"></i> Worship Night</span>
-          <span class="hc-pill"><i class="fas fa-fire"></i> Spiritual Revival</span>
-        </div>
-        <a href="<?= SITE_URL ?>/pages/events/rekindle" class="hc-cta">
-          Discover More <i class="fas fa-arrow-right"></i>
-        </a>
-      </div>
-      <div class="hc-right">
-        <div class="hc-img" style="background-image: url('<?= ASSETS_PATH ?>/images/rekindle.jpg');"></div>
-        <div class="hc-stripe"></div>
-        <div class="hc-chip">
-          <span class="hc-chip-num">04</span>
-          <span class="hc-chip-label">Event</span>
-        </div>
-      </div>
+    <!-- Acronym breakdown -->
+    <div class="sg-expanded-content" style="position:relative;z-index:1;margin-top:1.5rem;display:grid;grid-template-columns:repeat(5,1fr);gap:0.5rem;max-width:20rem;">
+      <div style="text-align:center;"><span style="font-family:var(--font-heading);font-weight:700;font-size:1.5rem;color:#fff;">T</span><p style="color:rgba(255,255,255,0.3);font-size:0.65rem;font-family:'DM Sans',sans-serif;margin:0.25rem 0 0;">Take it</p></div>
+      <div style="text-align:center;"><span style="font-family:var(--font-heading);font-weight:700;font-size:1.5rem;color:#fff;">R</span><p style="color:rgba(255,255,255,0.3);font-size:0.65rem;font-family:'DM Sans',sans-serif;margin:0.25rem 0 0;">Read it</p></div>
+      <div style="text-align:center;"><span style="font-family:var(--font-heading);font-weight:700;font-size:1.5rem;color:#fff;">U</span><p style="color:rgba(255,255,255,0.3);font-size:0.65rem;font-family:'DM Sans',sans-serif;margin:0.25rem 0 0;">Understand</p></div>
+      <div style="text-align:center;"><span style="font-family:var(--font-heading);font-weight:700;font-size:1.5rem;color:#fff;">T</span><p style="color:rgba(255,255,255,0.3);font-size:0.65rem;font-family:'DM Sans',sans-serif;margin:0.25rem 0 0;">Teach it</p></div>
+      <div style="text-align:center;"><span style="font-family:var(--font-heading);font-weight:700;font-size:1.5rem;color:#fff;">H</span><p style="color:rgba(255,255,255,0.3);font-size:0.65rem;font-family:'DM Sans',sans-serif;margin:0.25rem 0 0;">Heed it</p></div>
     </div>
-
-  </div><!-- /hc-track -->
-
-  <!-- Navigation (on the seam) -->
-  <div class="hc-nav">
-    <button class="hc-nav-btn" id="hcPrev" aria-label="Previous"><i class="fas fa-chevron-up"></i></button>
-    <button class="hc-nav-btn" id="hcNext" aria-label="Next"><i class="fas fa-chevron-down"></i></button>
+    <div class="sg-expanded-content" style="position:relative;z-index:1;margin-top:auto;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <p style="font-family:var(--font-heading);font-weight:600;font-size:1.125rem;letter-spacing:-0.3px;color:#fff;margin:0;">March · July · November</p>
+        <p style="color:rgba(255,255,255,0.4);font-size:0.7rem;font-family:'DM Sans',sans-serif;margin:0.125rem 0 0;">Open to the public</p>
+      </div>
+      <button style="background:#fff;color:#1A1A1A;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:500;padding:0.75rem 1.5rem;border-radius:9999px;border:none;cursor:pointer;">Join a Session →</button>
+    </div>
   </div>
+</template>
 
-  <!-- Dot indicators -->
-  <div class="hc-dots" id="hcDots">
-    <span class="hc-dot active" data-i="0"></span>
-    <span class="hc-dot" data-i="1"></span>
-    <span class="hc-dot" data-i="2"></span>
-    <span class="hc-dot" data-i="3"></span>
+<template id="sg-tpl-card-gold">
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:2.5rem;padding-top:3.5rem;overflow:hidden;background-image: url('<?= ASSETS_PATH ?>images/rekindle.jpg'); background-size: cover; background-position: center;">
+    <div style="position:absolute;inset:0;background: linear-gradient(160deg, rgba(44, 24, 16, 0.95) 0%, rgba(26, 15, 8, 0.93) 100%); z-index: 0;"></div>
+    <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 75% 50%, rgba(249,115,22,0.15) 0%, transparent 60%);"></div>
+    <div class="sg-expanded-content" style="position:relative;z-index:1;">
+      <p style="color:rgba(251,191,36,0.6);font-size:0.875rem;font-family:'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 0.25rem;">Intimate Worship</p>
+      <h2 style="font-family:var(--font-heading);font-weight:600;font-size:clamp(26px,3vw,48px);letter-spacing:-1.5px;line-height:1.05;color:#fef3c7;margin:0 0 1rem;">
+        Rekindle
+      </h2>
+      <p style="color:rgba(253,230,138,0.45);font-family:'DM Sans',sans-serif;font-size:0.875rem;max-width:18rem;line-height:1.7;margin:0;">
+        An intimate worship experience geared at revival and repositioning. Intentional worship where the spontaneous happens — reigniting dwindled fire at the start of each year.
+      </p>
+    </div>
+    <!-- Tags -->
+    <div class="sg-expanded-content" style="position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:1rem;">
+      <span style="background:rgba(251,191,36,0.15);color:#fcd34d;font-size:0.75rem;font-family:'DM Sans',sans-serif;padding:0.375rem 0.75rem;border-radius:9999px;border:1px solid rgba(251,191,36,0.2);">🔥 Spiritual Revival</span>
+      <span style="background:rgba(251,191,36,0.15);color:#fcd34d;font-size:0.75rem;font-family:'DM Sans',sans-serif;padding:0.375rem 0.75rem;border-radius:9999px;border:1px solid rgba(251,191,36,0.2);">🎵 Worship Night</span>
+      <span style="background:rgba(251,191,36,0.15);color:#fcd34d;font-size:0.75rem;font-family:'DM Sans',sans-serif;padding:0.375rem 0.75rem;border-radius:9999px;border:1px solid rgba(251,191,36,0.2);">📅 Early Year</span>
+    </div>
+    <div class="sg-expanded-content" style="position:relative;z-index:1;margin-top:auto;padding-top:1.5rem;border-top:1px solid rgba(251,191,36,0.15);display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <p style="font-family:var(--font-heading);font-weight:600;font-size:1.125rem;letter-spacing:-0.3px;color:#fef3c7;margin:0;">Start of each year</p>
+        <p style="color:rgba(251,191,36,0.4);font-size:0.7rem;font-family:'DM Sans',sans-serif;margin:0.125rem 0 0;">Reignite your fire</p>
+      </div>
+      <button style="background:#F97316;color:#fff;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:500;padding:0.75rem 1.5rem;border-radius:9999px;border:none;cursor:pointer;">Get Involved →</button>
+    </div>
   </div>
+</template>
 
-  <!-- Slide counter (top right) -->
-  <div class="hc-counter">
-    <strong id="hcCurrent">01</strong> / 04
-  </div>
+<!-- ══ BENTO HERO JAVASCRIPT ════════════════════════════════════ -->
+<script>
+(function () {
+  'use strict';
 
-  <!-- Pause button -->
-  <button class="hc-pause" id="hcPause" aria-label="Pause slideshow">
-    <i class="fas fa-pause"></i>
-  </button>
+  const EXPAND_DURATION   = 480;
+  const COLLAPSE_DURATION = 400;
+  const EASING_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)';
+  const EASING_IN  = 'cubic-bezier(0.4, 0, 0.8, 0.6)';
 
-  <!-- Progress bar -->
-  <div class="hc-progress-rail">
-    <div class="hc-progress-bar" id="hcBar"></div>
-  </div>
+  let isAnimating = false;
+  let activeCard  = null;
 
-</section>
+  const bentoWrap = document.getElementById('sg-bento-wrap');
 
+  if (!bentoWrap) return;
+
+  const templateMap = {
+    'sg-card-main':  'sg-tpl-card-main',
+    'sg-card-red':   'sg-tpl-card-red',
+    'sg-card-black': 'sg-tpl-card-black',
+    'sg-card-gold':  'sg-tpl-card-gold',
+  };
+
+  function closeBtnHtml(theme) {
+    const cls = (theme === 'white')
+      ? 'background:rgba(26,26,26,0.1);color:#1A1A1A;'
+      : 'background:rgba(255,255,255,0.15);color:#fff;';
+    return `<button id="sg-close-btn"
+                    style="${cls}"
+                    onclick="(function(){document.getElementById('sg-close-btn').dispatchEvent(new CustomEvent('sg-collapse',{bubbles:true}))})()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>`;
+  }
+
+  function expandCard(sourceCard) {
+    if (isAnimating) return;
+    isAnimating = true;
+    activeCard  = sourceCard;
+
+    const cardId = sourceCard.id;
+    const theme  = sourceCard.dataset.sgExpandTheme;
+    const bg     = sourceCard.dataset.sgExpandBg;
+
+    const firstRect = sourceCard.getBoundingClientRect();
+    const wrapRect  = bentoWrap.getBoundingClientRect();
+
+    const firstRel = {
+      top:    firstRect.top  - wrapRect.top,
+      left:   firstRect.left - wrapRect.left,
+      width:  firstRect.width,
+      height: firstRect.height,
+    };
+
+    const tpl = document.getElementById(templateMap[cardId]);
+    const tplContent = tpl ? tpl.innerHTML : '';
+
+    const clone = document.createElement('div');
+    clone.id = 'sg-expand-clone';
+    clone.style.cssText = [
+      'position:absolute',
+      `top:${firstRel.top}px`,
+      `left:${firstRel.left}px`,
+      `width:${firstRel.width}px`,
+      `height:${firstRel.height}px`,
+      `background:${bg}`,
+      'border-radius:20px',
+      'overflow:hidden',
+      'z-index:50',
+      'pointer-events:none',
+    ].join(';');
+    clone.innerHTML = closeBtnHtml(theme) + tplContent;
+    bentoWrap.appendChild(clone);
+
+    clone.addEventListener('sg-collapse', collapseCard);
+
+    sourceCard.classList.add('sg-card-ghost');
+
+    const lastW = wrapRect.width;
+    const lastH = wrapRect.height;
+    const scaleX = firstRel.width  / lastW;
+    const scaleY = firstRel.height / lastH;
+
+    const anim = clone.animate([
+      {
+        transform: `translate(${firstRel.left}px,${firstRel.top}px) scale(${scaleX},${scaleY})`,
+        borderRadius: '20px',
+        top: '0px', left: '0px',
+        width: `${lastW}px`, height: `${lastH}px`,
+      },
+      {
+        transform: 'translate(0,0) scale(1,1)',
+        borderRadius: '20px',
+        top: '0px', left: '0px',
+        width: `${lastW}px`, height: `${lastH}px`,
+      },
+    ], { duration: EXPAND_DURATION, easing: EASING_OUT, fill: 'forwards' });
+
+    anim.finished.then(() => {
+      clone.style.cssText = [
+        'position:absolute',
+        'top:0', 'left:0',
+        `width:${lastW}px`,
+        `height:${lastH}px`,
+        'transform:none',
+        'border-radius:20px',
+        'overflow:hidden',
+        'z-index:50',
+        'pointer-events:auto',
+      ].join(';');
+      clone.classList.add('sg-settled');
+      clone.querySelectorAll('.sg-expanded-content').forEach(el => el.classList.add('sg-visible'));
+      clone.querySelectorAll('.sg-chart-line').forEach(el => el.classList.add('sg-drawn'));
+      isAnimating = false;
+    });
+  }
+
+  function collapseCard() {
+    if (isAnimating || !activeCard) return;
+    isAnimating = true;
+
+    const clone    = document.getElementById('sg-expand-clone');
+    if (!clone) { isAnimating = false; return; }
+
+    const wrapRect = bentoWrap.getBoundingClientRect();
+    const cardRect = activeCard.getBoundingClientRect();
+
+    const cardRel = {
+      top:    cardRect.top  - wrapRect.top,
+      left:   cardRect.left - wrapRect.left,
+      width:  cardRect.width,
+      height: cardRect.height,
+    };
+
+    clone.querySelectorAll('.sg-expanded-content').forEach(el => el.classList.remove('sg-visible'));
+
+    const scaleX = cardRel.width  / wrapRect.width;
+    const scaleY = cardRel.height / wrapRect.height;
+
+    const anim = clone.animate([
+      { transform: 'translate(0,0) scale(1,1)', borderRadius: '20px' },
+      { transform: `translate(${cardRel.left}px,${cardRel.top}px) scale(${scaleX},${scaleY})`, borderRadius: '20px' },
+    ], { duration: COLLAPSE_DURATION, easing: EASING_IN, fill: 'forwards' });
+
+    anim.finished.then(() => {
+      clone.remove();
+      activeCard.classList.remove('sg-card-ghost');
+      activeCard  = null;
+      isAnimating = false;
+    });
+  }
+
+  document.querySelectorAll('[data-sg-expandable="true"]').forEach(card => {
+    card.addEventListener('click', () => expandCard(card));
+  });
+
+  const mainCta = document.getElementById('sg-main-cta');
+  if (mainCta) {
+    mainCta.addEventListener('click', (e) => {
+      e.stopPropagation();
+      expandCard(document.getElementById('sg-card-main'));
+    });
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') collapseCard();
+  });
+
+})();
+</script>
+
+<!-- ══ Page-specific styles ════════════════════════════════════════ -->
+<style>
+.countdown-timer {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.countdown-item { text-align: center; }
+
+.countdown-value {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--primary-purple);
+  display: block;
+}
+
+.countdown-label {
+  font-size: 0.75rem;
+  color: var(--gray-600);
+  text-transform: uppercase;
+}
+</style>
 
 <!-- Filters Section -->
 <section class="container">
@@ -1124,12 +1408,12 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <script>
 // Auto-submit form when filters change
-document.querySelectorAll('.filter-select, .search-input').forEach(element => {
+document.querySelectorAll('.filter-select, .search-input').forEach(function(element) {
   if (element.classList.contains('search-input')) {
-    let timeout;
+    var timeout;
     element.addEventListener('input', function() {
       clearTimeout(timeout);
-      timeout = setTimeout(() => {
+      timeout = setTimeout(function() {
         document.getElementById('filterForm').submit();
       }, 500);
     });
@@ -1142,12 +1426,12 @@ document.querySelectorAll('.filter-select, .search-input').forEach(element => {
 
 // View switcher
 function switchView(view) {
-  const grid = document.getElementById('eventsGrid');
-  const buttons = document.querySelectorAll('.view-toggle-btn');
-  
-  buttons.forEach(btn => btn.classList.remove('active'));
+  var grid = document.getElementById('eventsGrid');
+  var buttons = document.querySelectorAll('.view-toggle-btn');
+
+  buttons.forEach(function(btn) { btn.classList.remove('active'); });
   event.target.closest('.view-toggle-btn').classList.add('active');
-  
+
   if (view === 'grid') {
     grid.classList.remove('list-view');
     grid.classList.add('grid-view');
@@ -1156,168 +1440,6 @@ function switchView(view) {
     grid.classList.add('list-view');
   }
 }
-</script>
-
-
-
-<script>
-(function () {
-  'use strict';
-
-  const DURATION = 6000; // ms per slide
-  const slides   = document.querySelectorAll('.hc-slide');
-  const dots     = document.querySelectorAll('.hc-dot');
-  const bar      = document.getElementById('hcBar');
-  const counter  = document.getElementById('hcCurrent');
-  const pauseBtn = document.getElementById('hcPause');
-  const total    = slides.length;
-
-  let current   = 0;
-  let playing   = true;
-  let timer     = null;
-  let barTimer  = null;
-  let barStart  = null;
-  let paused    = false;
-
-  // ── helpers ─────────────────────────────────────────────────
-  function pad(n) { return String(n + 1).padStart(2, '0'); }
-
-  function updateDots(idx) {
-    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
-  }
-
-  function updateCounter(idx) {
-    counter.textContent = pad(idx);
-  }
-
-  // Progress bar animation
-  function startBar() {
-    bar.style.transition = 'none';
-    bar.style.width = '0%';
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        bar.style.transition = `width ${DURATION}ms linear`;
-        bar.style.width = '100%';
-      });
-    });
-  }
-
-  function pauseBar() {
-    const computed = getComputedStyle(bar).width;
-    const pct = (parseFloat(computed) / bar.parentElement.offsetWidth) * 100;
-    bar.style.transition = 'none';
-    bar.style.width = pct + '%';
-  }
-
-  function resumeBar(remaining) {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        bar.style.transition = `width ${remaining}ms linear`;
-        bar.style.width = '100%';
-      });
-    });
-  }
-
-  // ── core transition ──────────────────────────────────────────
-  function goTo(idx, noReset) {
-    if (idx === current) return;
-    const prev = current;
-    current = (idx + total) % total;
-
-    slides[prev].classList.remove('active', 'entering');
-    slides[prev].classList.add('leaving');
-    slides[prev].addEventListener('animationend', function handler() {
-      slides[prev].classList.remove('leaving');
-      slides[prev].removeEventListener('animationend', handler);
-    });
-
-    slides[current].classList.add('active', 'entering');
-    slides[current].addEventListener('animationend', function handler() {
-      slides[current].classList.remove('entering');
-      slides[current].removeEventListener('animationend', handler);
-    }, { once: true });
-
-    updateDots(current);
-    updateCounter(current);
-
-    if (!noReset) {
-      resetTimer();
-      startBar();
-    }
-  }
-
-  // ── auto-play ────────────────────────────────────────────────
-  let sliceStart = null;
-  let sliceElapsed = 0;
-
-  function resetTimer() {
-    clearTimeout(timer);
-    sliceElapsed = 0;
-    sliceStart = Date.now();
-    if (playing) {
-      timer = setTimeout(advance, DURATION);
-    }
-  }
-
-  function advance() {
-    goTo(current + 1);
-  }
-
-  function pausePlay() {
-    if (!playing) return;
-    sliceElapsed += Date.now() - sliceStart;
-    clearTimeout(timer);
-    pauseBar();
-    playing = false;
-    pauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-  }
-
-  function resumePlay() {
-    if (playing) return;
-    playing = true;
-    sliceStart = Date.now();
-    const remaining = DURATION - sliceElapsed;
-    timer = setTimeout(advance, remaining);
-    resumeBar(remaining);
-    pauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-  }
-
-  // ── wire events ──────────────────────────────────────────────
-  document.getElementById('hcNext').addEventListener('click', () => { goTo(current + 1); });
-  document.getElementById('hcPrev').addEventListener('click', () => { goTo(current - 1); });
-
-  dots.forEach(dot => {
-    dot.addEventListener('click', () => goTo(+dot.dataset.i));
-  });
-
-  pauseBtn.addEventListener('click', () => playing ? pausePlay() : resumePlay());
-
-  // Pause on hover
-  const hero = document.querySelector('.events-hero');
-  hero.addEventListener('mouseenter', pausePlay);
-  hero.addEventListener('mouseleave', resumePlay);
-
-  // Touch swipe support
-  let touchStartX = 0;
-  hero.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-  hero.addEventListener('touchend', e => {
-    const diff = touchStartX - e.changedTouches[0].clientX;
-    if (Math.abs(diff) > 50) goTo(diff > 0 ? current + 1 : current - 1);
-  });
-
-  // Keyboard support
-  document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
-    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   goTo(current - 1);
-  });
-
-  // ── boot ─────────────────────────────────────────────────────
-  resetTimer();
-  startBar();
-  updateDots(0);
-  updateCounter(0);
-
-})();
 </script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

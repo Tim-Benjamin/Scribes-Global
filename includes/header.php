@@ -58,7 +58,6 @@ require_once __DIR__ . '/../config/session.php';
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-
     <!-- Leaflet CSS & JS (for chapters map) -->
     <?php if ($pageCSS === 'chapters' || $pageCSS === 'chapter-detail'): ?>
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -67,10 +66,15 @@ require_once __DIR__ . '/../config/session.php';
 </head>
 
 <body>
-    <?php if (!isset($noSplash) || !$noSplash): ?>
+    <!-- ✅ SPLASH SCREEN - Controlled by SHOW_SPLASH_SCREEN config -->
+    <?php 
+    $showSplash = (defined('SHOW_SPLASH_SCREEN') && SHOW_SPLASH_SCREEN) && (!isset($noSplash) || !$noSplash);
+    if ($showSplash): 
+    ?>
         <?php include __DIR__ . '/splash.php'; ?>
     <?php endif; ?>
 
+    <!-- NAVIGATION -->
     <?php if (!isset($noNav) || !$noNav): ?>
         <?php include __DIR__ . '/nav.php'; ?>
     <?php endif; ?>
