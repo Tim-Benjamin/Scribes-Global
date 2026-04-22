@@ -60,16 +60,17 @@ if ($currentUser) {
     $isLiked = $likeCheckStmt->fetch() ? true : false;
 }
 
-// Get comments
+// Get comments (including guest comments)
 $commentsStmt = $conn->prepare("
     SELECT 
         bc.*,
         u.first_name,
         u.last_name,
         u.profile_photo,
-        u.custom_tag
+        u.custom_tag,
+        u.id as user_id
     FROM blog_comments bc
-    JOIN users u ON bc.user_id = u.id
+    LEFT JOIN users u ON bc.user_id = u.id
     WHERE bc.post_id = ? AND bc.status = 'approved' AND bc.parent_id IS NULL
     ORDER BY bc.created_at DESC
 ");
@@ -341,12 +342,36 @@ require_once __DIR__ . '/../../includes/header.php';
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
+/* Guest info form */
+.guest-info-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--gray-300);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  transition: all var(--transition-base);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #6B46C1;
+  box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+}
+
 .comment-textarea {
   width: 100%;
   padding: 1rem;
   border: 2px solid var(--gray-300);
   border-radius: var(--radius-lg);
-  font-family: var(--font-primary);
+  font-family: var(--font-body);
   font-size: 0.9375rem;
   resize: vertical;
   min-height: 120px;
@@ -389,6 +414,7 @@ require_once __DIR__ . '/../../includes/header.php';
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--gray-300);
+  flex-shrink: 0;
 }
 
 .comment-author-info {
@@ -556,6 +582,10 @@ require_once __DIR__ . '/../../includes/header.php';
   .comments-section {
     padding: 1.5rem;
   }
+
+  .guest-info-form {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
 
@@ -653,50 +683,65 @@ require_once __DIR__ . '/../../includes/header.php';
           Comments (<?= number_format($post['comments_count']) ?>)
         </h2>
         
-        <?php if ($currentUser): ?>
-          <!-- Comment Form -->
-          <div class="comment-form">
-            <textarea 
-              class="comment-textarea" 
-              placeholder="Share your thoughts..."
-              id="commentContent"
-            ></textarea>
-            <button class="btn btn-primary comment-submit" onclick="addComment()">
-              <i class="fas fa-paper-plane"></i> Post Comment
-            </button>
-          </div>
-        <?php else: ?>
-          <div class="comment-form" style="text-align: center;">
-            <p style="color: var(--gray-600); margin-bottom: 1rem;">
-              <i class="fas fa-lock"></i> Login to join the conversation
-            </p>
-            <a href="<?= SITE_URL ?>/auth/login" class="btn btn-primary">
-              <i class="fas fa-sign-in-alt"></i> Login
-            </a>
-          </div>
-        <?php endif; ?>
+        <!-- Comment Form - Works for guests and logged-in users -->
+        <div class="comment-form">
+          <?php if (!$currentUser): ?>
+            <!-- Guest Comment Form -->
+            <div class="guest-info-form">
+              <input 
+                type="text" 
+                class="form-input" 
+                placeholder="Your name *"
+                id="guestName"
+                required
+              >
+              <input 
+                type="email" 
+                class="form-input" 
+                placeholder="Your email *"
+                id="guestEmail"
+                required
+              >
+            </div>
+          <?php endif; ?>
+          
+          <textarea 
+            class="comment-textarea" 
+            placeholder="Share your thoughts..."
+            id="commentContent"
+          ></textarea>
+          <button class="btn btn-primary comment-submit" onclick="addComment()">
+            <i class="fas fa-paper-plane"></i> Post Comment
+          </button>
+        </div>
         
         <!-- Comments List -->
         <?php if (count($comments) > 0): ?>
           <?php foreach ($comments as $comment): ?>
             <?php
-            $commentBadges = getUserBadges($comment['user_id']);
+            $commentBadges = $comment['user_id'] ? getUserBadges($comment['user_id']) : [];
             $commentTime = timeAgo($comment['created_at']);
+            $displayName = $comment['guest_name'] ?? ($comment['first_name'] . ' ' . $comment['last_name']);
+            $initials = strtoupper(substr(explode(' ', $displayName)[0], 0, 1));
             ?>
             
             <div class="comment">
               <div class="comment-header">
-                <?php if ($comment['profile_photo']): ?>
+                <?php if ($comment['profile_photo'] && $comment['user_id']): ?>
                   <img src="<?= ASSETS_PATH ?>images/uploads/<?= htmlspecialchars($comment['profile_photo']) ?>" class="comment-avatar" alt="Commenter">
                 <?php else: ?>
-                  <div class="comment-avatar" style="background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700;">
-                    <?= strtoupper(substr($comment['first_name'], 0, 1)) ?>
+                  <div class="comment-avatar" style="background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.9rem;">
+                    <?= $initials ?>
                   </div>
                 <?php endif; ?>
                 
                 <div class="comment-author-info">
                   <div class="comment-author-name">
-                    <?= renderUserNameWithBadges($comment['first_name'], $comment['last_name'], $commentBadges, 14) ?>
+                    <?php if ($comment['user_id']): ?>
+                      <?= renderUserNameWithBadges($comment['first_name'], $comment['last_name'], $commentBadges, 14) ?>
+                    <?php else: ?>
+                      <span><?= htmlspecialchars($comment['guest_name']) ?> <span style="font-size: 0.75rem; font-weight: 400; color: #6B46C1;">(Guest)</span></span>
+                    <?php endif; ?>
                   </div>
                   <div class="comment-time"><?= $commentTime ?></div>
                 </div>
@@ -707,10 +752,11 @@ require_once __DIR__ . '/../../includes/header.php';
               </div>
               
               <div class="comment-actions">
-                <button class="comment-action">
-                  <i class="far fa-heart"></i> Like
-                </button>
-                <?php if ($currentUser && ($currentUser['id'] == $comment['user_id'] || isAdmin())): ?>
+                <?php if ($currentUser && $currentUser['id'] == $comment['user_id'] && $comment['user_id']): ?>
+                  <button class="comment-action" onclick="deleteComment(<?= $comment['id'] ?>)" style="color: #EB5757;">
+                    <i class="far fa-trash-alt"></i> Delete
+                  </button>
+                <?php elseif ($currentUser && isAdmin()): ?>
                   <button class="comment-action" onclick="deleteComment(<?= $comment['id'] ?>)" style="color: #EB5757;">
                     <i class="far fa-trash-alt"></i> Delete
                   </button>
@@ -770,7 +816,7 @@ require_once __DIR__ . '/../../includes/header.php';
   </div>
 </div>
 
-<!-- Share Modal (reuse from blog index) -->
+<!-- Share Modal -->
 <div class="share-modal" id="shareModal">
   <div class="share-modal-content">
     <div class="share-modal-header">
@@ -838,13 +884,8 @@ require_once __DIR__ . '/../../includes/header.php';
 let currentPostId = <?= $postId ?>;
 let currentPostTitle = '<?= addslashes($post['title']) ?>';
 
-// Toggle like
+// ✅ UPDATED: Toggle like - Works for guests and logged-in users
 async function toggleLike(postId, button) {
-  <?php if (!$currentUser): ?>
-    window.location.href = '<?= SITE_URL ?>/auth/login';
-    return;
-  <?php endif; ?>
-  
   const icon = button.querySelector('i');
   const countSpan = button.querySelector('span');
   const currentCount = parseInt(countSpan.textContent.replace(/[^0-9]/g, ''));
@@ -876,10 +917,11 @@ async function toggleLike(postId, button) {
     }
   } catch (error) {
     console.error('Error:', error);
+    alert('Failed to process like');
   }
 }
 
-// Add comment
+// ✅ UPDATED: Add comment - Works for guests and logged-in users
 async function addComment() {
   const content = document.getElementById('commentContent').value.trim();
   
@@ -888,10 +930,44 @@ async function addComment() {
     return;
   }
   
+  // Get guest info if not logged in
+  let guestName = null;
+  let guestEmail = null;
+  
+  const guestNameInput = document.getElementById('guestName');
+  const guestEmailInput = document.getElementById('guestEmail');
+  
+  if (guestNameInput) {
+    guestName = guestNameInput.value.trim();
+    if (!guestName) {
+      alert('Please enter your name');
+      return;
+    }
+  }
+  
+  if (guestEmailInput) {
+    guestEmail = guestEmailInput.value.trim();
+    if (!guestEmail) {
+      alert('Please enter your email');
+      return;
+    }
+    if (!isValidEmail(guestEmail)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+  }
+  
   try {
     const formData = new FormData();
     formData.append('post_id', <?= $postId ?>);
     formData.append('content', content);
+    
+    if (guestName) {
+      formData.append('guest_name', guestName);
+    }
+    if (guestEmail) {
+      formData.append('guest_email', guestEmail);
+    }
     
     const response = await fetch('<?= SITE_URL ?>/api/blog.php?action=add_comment', {
       method: 'POST',
@@ -901,14 +977,28 @@ async function addComment() {
     const result = await response.json();
     
     if (result.success) {
+      // Clear form
+      document.getElementById('commentContent').value = '';
+      if (guestNameInput) guestNameInput.value = '';
+      if (guestEmailInput) guestEmailInput.value = '';
+      
+      // Reload page
+      alert('Comment posted successfully!');
       window.location.reload();
     } else {
-      alert(result.message || 'Failed to add comment');
+      console.error('API Response:', result);
+      alert(result.message || 'Failed to add comment. Please check your input and try again.');
     }
   } catch (error) {
     console.error('Error:', error);
-    alert('An error occurred');
+    alert('An error occurred while posting your comment');
   }
+}
+
+// Email validation helper
+function isValidEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
 }
 
 // Delete comment

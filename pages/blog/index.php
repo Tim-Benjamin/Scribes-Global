@@ -82,7 +82,7 @@ $currentUser = isLoggedIn() ? getCurrentUser() : null;
 
 require_once __DIR__ . '/../../includes/header.php';
 ?>
-<!-- <div id="three-canvas-container" style="position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none;"></div> -->
+
 <!-- Hero Section -->
 <section class="blog-hero">
   <div class="blog-hero-content">
@@ -129,6 +129,7 @@ require_once __DIR__ . '/../../includes/header.php';
             $timeAgo = timeAgo($post['published_at']);
             $isLiked = false;
             
+            // Check if user has liked (for logged-in users only)
             if ($currentUser) {
                 $likeCheckStmt = $conn->prepare("SELECT id FROM blog_likes WHERE post_id = ? AND user_id = ?");
                 $likeCheckStmt->execute([$post['id'], $currentUser['id']]);
@@ -178,7 +179,7 @@ require_once __DIR__ . '/../../includes/header.php';
                     <span><?= number_format($post['views']) ?></span>
                   </button>
                   
-                  <button class="blog-action-btn likes <?= $isLiked ? 'liked' : '' ?>" onclick="toggleLike(<?= $post['id'] ?>, this)">
+                  <button class="blog-action-btn likes <?= $isLiked ? 'liked' : '' ?>" onclick="toggleLike(<?= $post['id'] ?>, this, <?= $currentUser ? 'true' : 'false' ?>)">
                     <i class="<?= $isLiked ? 'fas' : 'far' ?> fa-heart"></i>
                     <span><?= number_format($post['likes_count']) ?></span>
                   </button>
@@ -337,13 +338,8 @@ function filterCategory(category) {
   window.location.href = '<?= SITE_URL ?>/pages/blog' + (params.toString() ? '?' + params.toString() : '');
 }
 
-// Toggle like
-async function toggleLike(postId, button) {
-  <?php if (!$currentUser): ?>
-    window.location.href = '<?= SITE_URL ?>/auth/login';
-    return;
-  <?php endif; ?>
-  
+// Toggle like - No login required
+async function toggleLike(postId, button, isLoggedIn) {
   const icon = button.querySelector('i');
   const count = button.querySelector('span');
   const currentCount = parseInt(count.textContent.replace(/,/g, ''));
@@ -372,9 +368,12 @@ async function toggleLike(postId, button) {
         icon.classList.add('fas');
         count.textContent = (currentCount + 1).toLocaleString();
       }
+    } else {
+      alert(result.message || 'Unable to process like');
     }
   } catch (error) {
     console.error('Error:', error);
+    alert('An error occurred while processing your like');
   }
 }
 
