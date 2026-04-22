@@ -1712,27 +1712,87 @@ function sanitizeId($str) {
 </section>
 
 <!-- ============================================================
-     CTA SECTION
+     CTA SECTION - NEWSLETTER
      ============================================================ -->
 <section class="cta-section">
     <div class="cta-bg"></div>
     <div class="cta-content reveal">
-        <div class="section-eyebrow" style="justify-content:center; margin-bottom:1.5rem;">Take The Next Step</div>
-        <h2 class="cta-title">Ready To Use Your Gifts For God's Glory?</h2>
+        <div class="section-eyebrow" style="justify-content:center; margin-bottom:1.5rem;">Stay Connected</div>
+        <h2 class="cta-title">Get Updates On New Events & Content</h2>
         <p class="cta-desc">
-            Join thousands of creatives around the world who are making an impact through their art, worship, and
-            testimony.
+            Subscribe to our newsletter and never miss inspiring stories, worship sessions, and creative events from Scribes Global.
         </p>
-        <div class="cta-btns">
-            <a href="<?= SITE_URL ?>/auth/register" class="btn-primary-gold">
-                <i class="fas fa-user-plus"></i> Create Account
-            </a>
+        
+        <div style="max-width: 500px; margin: 2rem auto;">
+            <form id="newsletterForm" style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
+                <input 
+                    type="text" 
+                    id="newsletterName" 
+                    name="name" 
+                    placeholder="Your name" 
+                    required
+                    style="padding: 0.85rem 1.5rem; border-radius: 25px; border: none; font-size: 0.9rem; min-width: 200px;"
+                >
+                <input 
+                    type="email" 
+                    id="newsletterEmail" 
+                    name="email" 
+                    placeholder="Your email" 
+                    required
+                    style="padding: 0.85rem 1.5rem; border-radius: 25px; border: none; font-size: 0.9rem; min-width: 200px;"
+                >
+                <button type="submit" class="btn-primary-gold" style="min-width: 150px;">
+                    <i class="fas fa-envelope"></i> Subscribe
+                </button>
+            </form>
+            <p style="font-size: 0.8rem; color: rgba(255,255,255,0.7); margin-top: 1rem; text-align: center;">
+                We respect your privacy. Unsubscribe at any time.
+            </p>
+        </div>
+        
+        <div class="cta-btns" style="margin-top: 1.5rem;">
             <a href="<?= SITE_URL ?>/pages/connect/volunteer" class="btn-ghost">
                 <i class="fas fa-hands-helping"></i> Volunteer With Us
             </a>
         </div>
     </div>
 </section>
+
+<script>
+// Newsletter subscription
+document.getElementById('newsletterForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const btn = this.querySelector('button[type="submit"]');
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subscribing...';
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch('<?= SITE_URL ?>/api/newsletter.php?action=subscribe', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            document.getElementById('newsletterForm').reset();
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    }
+});
+</script>
 
 
 <!-- ============================================================
