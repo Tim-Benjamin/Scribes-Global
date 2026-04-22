@@ -694,6 +694,62 @@ function handleCreateEvent($conn)
         error_log("Create event error: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }
+
+
+
+            // Notify users if enabled
+        $userNotifications = 0;
+        if (!empty($_POST['notify_users'])) {
+            require_once __DIR__ . '/../includes/email-templates.php';
+            
+            $usersStmt = $conn->query("SELECT email, first_name FROM users WHERE status = 'active'");
+            $users = $usersStmt->fetchAll();
+            
+            require_once __DIR__ . '/../config/mailer.php';
+            $mailer = new Mailer();
+            
+            $eventDetailLink = SITE_URL . '/pages/events/details?id=' . $eventId;
+            $emailSubject = "📅 New Event: " . htmlspecialchars($title) . " - Scribes Global";
+            $emailBody = getEventNotificationEmail("Member", [
+                'id' => $eventId,
+                'title' => $title,
+                'description' => $description,
+                'start_date' => $start_date,
+                'location' => $location
+            ]);
+            
+            foreach ($users as $user) {
+                if ($mailer->send($user['email'], $emailSubject, $emailBody, '', $user['first_name'])) {
+                    $userNotifications++;
+                }
+                usleep(50000); // 0.05 second delay
+            }
+        }
+        
+        // Notify newsletter subscribers if enabled
+        $newsletterNotifications = 0;
+        if (!empty($_POST['notify_newsletter'])) {
+            require_once __DIR__ . '/../api/newsletter.php';
+            
+            $eventData = [
+                'id' => $eventId,
+                'title' => $title,
+                'description' => $description,
+                'start_date' => $start_date,
+                'location' => $location
+            ];
+            
+            $newsletterNotifications = sendEventNotificationToSubscribers($conn, $eventId, $eventData);
+        }
+        
+        // Update response
+        echo json_encode([
+            'success' => true,
+            'message' => 'Event created successfully!',
+            'event_id' => $eventId,
+            'user_notifications_sent' => $userNotifications,
+            'newsletter_emails_sent' => $newsletterNotifications
+        ]);
 }
 
 function uploadEventImage($file)

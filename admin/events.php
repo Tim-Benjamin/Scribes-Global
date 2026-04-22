@@ -3,6 +3,8 @@ $pageTitle = 'Events Management - Admin - Scribes Global';
 $pageDescription = 'Manage events';
 $pageCSS = 'admin';
 $noSplash = true;
+$noNav = true;        // Don't show navigation
+$noFooter = true;     // Don't show footer content
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/session.php';
@@ -97,26 +99,282 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <style>
+/* ═══════════════════════════════════════════════════════════
+   ADMIN EVENTS PAGE
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --primary-purple: #6B46C1;
+  --primary-gold: #D4AF37;
+  --primary-coral: #EB5757;
+  --dark-bg: #1A1A2E;
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --radius-full: 9999px;
+  --radius-2xl: 24px;
+  --radius-xl: 16px;
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --transition-base: 300ms ease-in-out;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--gray-50);
+  font-family: var(--font-body);
+}
+
+.admin-layout {
+  display: flex;
+  background: var(--gray-50);
+  min-height: 100vh;
+}
+
+.admin-main {
+  flex: 1;
+  margin-left: 260px;
+  padding: 2rem;
+  overflow-y: auto;
+  transition: margin-left var(--transition);
+}
+
+.admin-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-page-title {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--dark-bg);
+  letter-spacing: -0.5px;
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-admin-toggle {
+  display: none;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--dark-bg);
+  font-size: 1.25rem;
+  transition: all var(--transition);
+}
+
+.mobile-admin-toggle:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+/* ─── Stats Grid ────────────────────────────────────────────– */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.admin-stat-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  border: 1px solid var(--gray-200);
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, currentColor, transparent);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.admin-stat-card:hover {
+  border-color: currentColor;
+  box-shadow: 0 8px 24px rgba(107, 70, 193, 0.12);
+  transform: translateY(-4px);
+}
+
+.admin-stat-card:hover::before {
+  opacity: 1;
+}
+
+.admin-stat-card.purple { color: var(--primary-purple); }
+.admin-stat-card.gold { color: var(--primary-gold); }
+.admin-stat-card.teal { color: #2D9CDB; }
+.admin-stat-card.coral { color: var(--primary-coral); }
+
+.admin-stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.admin-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: rgba(107, 70, 193, 0.1);
+  color: var(--primary-purple);
+}
+
+.admin-stat-card.gold .admin-stat-icon {
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--primary-gold);
+}
+
+.admin-stat-card.teal .admin-stat-icon {
+  background: rgba(45, 156, 219, 0.1);
+  color: #2D9CDB;
+}
+
+.admin-stat-card.coral .admin-stat-icon {
+  background: rgba(235, 87, 87, 0.1);
+  color: var(--primary-coral);
+}
+
+.admin-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.admin-stat-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+/* ─── Filters Bar ────────────────────────────────────────────– */
+.filters-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+}
+
+.search-input,
+.filter-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+  transition: all var(--transition);
+  background: white;
+  color: var(--dark-bg);
+}
+
+.search-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+}
+
+/* ─── Card Styles ────────────────────────────────────────────– */
+.admin-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition);
+}
+
+.admin-card:hover {
+  border-color: var(--gray-300);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.admin-card-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-card-body {
+  padding: 1.5rem;
+}
+
+/* ─── Event Grid ────────────────────────────────────────────– */
 .event-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
-  margin-top: 2rem;
+  margin-top: 1.5rem;
 }
 
 .event-admin-card {
   background: white;
   border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  transition: all var(--transition-base);
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition);
   cursor: pointer;
   position: relative;
 }
 
 .event-admin-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border-color: var(--primary-purple);
+  box-shadow: 0 12px 24px rgba(107, 70, 193, 0.15);
 }
 
 .event-admin-image {
@@ -124,14 +382,11 @@ require_once __DIR__ . '/../includes/header.php';
   height: 180px;
   object-fit: cover;
   background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%);
-}
-
-.event-admin-image.placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 3rem;
+  font-size: 2.5rem;
 }
 
 .event-admin-body {
@@ -141,8 +396,9 @@ require_once __DIR__ . '/../includes/header.php';
 .event-admin-header {
   display: flex;
   justify-content: space-between;
-  align-items: start;
+  align-items: flex-start;
   margin-bottom: 1rem;
+  gap: 1rem;
 }
 
 .event-admin-title {
@@ -154,6 +410,55 @@ require_once __DIR__ . '/../includes/header.php';
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  flex: 1;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.status-badge.upcoming {
+  background: rgba(45, 156, 219, 0.15);
+  color: #2D9CDB;
+}
+
+.status-badge.ongoing {
+  background: rgba(81, 207, 102, 0.15);
+  color: #51CF66;
+}
+
+.status-badge.completed {
+  background: rgba(107, 70, 193, 0.15);
+  color: var(--primary-purple);
+}
+
+.status-badge.cancelled {
+  background: rgba(235, 87, 87, 0.15);
+  color: var(--primary-coral);
+}
+
+.featured-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: linear-gradient(135deg, #D4AF37 0%, #F2D97A 100%);
+  color: #1A1A2E;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1;
 }
 
 .event-admin-meta {
@@ -174,6 +479,7 @@ require_once __DIR__ . '/../includes/header.php';
 .event-admin-meta-item i {
   width: 16px;
   color: var(--primary-purple);
+  flex-shrink: 0;
 }
 
 .event-admin-stats {
@@ -200,6 +506,7 @@ require_once __DIR__ . '/../includes/header.php';
   font-size: 0.7rem;
   color: var(--gray-600);
   text-transform: uppercase;
+  font-weight: 600;
 }
 
 .event-admin-actions {
@@ -207,33 +514,361 @@ require_once __DIR__ . '/../includes/header.php';
   gap: 0.5rem;
 }
 
-.featured-badge {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: linear-gradient(135deg, #D4AF37 0%, #F2D97A 100%);
-  color: #1A1A2E;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  font-weight: 700;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-700);
+  cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all var(--transition);
+}
+
+.btn-icon:hover {
+  background: var(--gray-100);
+  border-color: var(--primary-purple);
+  color: var(--primary-purple);
+}
+
+.btn-icon.btn-delete:hover {
+  background: rgba(235, 87, 87, 0.1);
+  border-color: var(--primary-coral);
+  color: var(--primary-coral);
+}
+
+/* ─── Table Styles ──────────────────────────────────────────– */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+}
+
+.data-table thead {
+  background: var(--gray-50);
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.data-table th {
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-700);
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 0.95rem;
+  color: var(--gray-800);
+}
+
+.data-table tbody tr:hover {
+  background: var(--gray-50);
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--gray-200);
+  flex-shrink: 0;
+}
+
+.user-info h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dark-bg);
+}
+
+.user-info p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--gray-600);
+}
+
+.action-buttons {
+  display: flex;
   gap: 0.5rem;
+}
+
+/* ─── Pagination ────────────���───────────────────────────────– */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.pagination button,
+.pagination span {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-700);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all var(--transition);
+}
+
+.pagination button:hover {
+  background: var(--primary-purple);
+  color: white;
+  border-color: var(--primary-purple);
+}
+
+.pagination button.active {
+  background: var(--primary-purple);
+  color: white;
+  border-color: var(--primary-purple);
+}
+
+.pagination span {
+  cursor: default;
+  border: none;
+  background: transparent;
+}
+
+/* ─── Empty State ────────────────────────────────────────────– */
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  color: var(--gray-400);
+  margin-bottom: 1rem;
+}
+
+.empty-state-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-700);
+  margin: 0 0 0.5rem 0;
+  font-family: var(--font-heading);
+}
+
+.empty-state-text {
+  font-size: 1rem;
+  color: var(--gray-600);
+  margin: 0 0 1.5rem 0;
+}
+
+/* ─── Modal Styles ──────────────────────────────────────────– */
+.admin-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  padding: 2rem;
+  overflow-y: auto;
+  backdrop-filter: blur(4px);
+}
+
+.admin-modal.active {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-modal-content {
+  background: white;
+  border-radius: var(--radius-xl);
+  max-width: 800px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.admin-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.admin-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+}
+
+.admin-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--gray-600);
+  transition: all var(--transition);
+}
+
+.admin-modal-close:hover {
+  color: var(--primary-purple);
+}
+
+.admin-modal-body {
+  padding: 1.5rem;
+  max-height: calc(80vh - 70px);
+  overflow-y: auto;
+}
+
+/* ─── Button Styles ─────────────────────────────────────────– */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition);
+  font-family: var(--font-body);
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--primary-purple);
+  color: white;
+  box-shadow: 0 4px 12px rgba(107, 70, 193, 0.3);
+}
+
+.btn-primary:hover {
+  background: #5a3aa5;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(107, 70, 193, 0.4);
+}
+
+.btn-secondary {
+  background: var(--gray-100);
+  color: var(--dark-bg);
+  border: 1px solid var(--gray-200);
+}
+
+.btn-secondary:hover {
+  background: var(--gray-200);
+}
+
+.btn-outline {
+  background: white;
+  color: var(--dark-bg);
+  border: 1px solid var(--gray-200);
+}
+
+.btn-outline:hover {
+  background: var(--gray-100);
+  border-color: var(--primary-purple);
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+}
+
+/* ─── Responsive Design ────────────────────────────────────– */
+@media (max-width: 768px) {
+  .admin-main {
+    margin-left: 0;
+    padding: 1.25rem;
+  }
+
+  .mobile-admin-toggle {
+    display: flex;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .event-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-page-title {
+    font-size: 1.5rem;
+  }
+
+  .admin-card-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-main {
+    padding: 1rem;
+  }
+
+  .event-admin-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .event-admin-actions {
+    flex-wrap: wrap;
+  }
+
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+  }
 }
 </style>
 
 <div class="admin-layout">
   <!-- Sidebar -->
-  <?php include __DIR__ . '/includes/sidebar.php'; ?>
+  <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
   
   <!-- Main Content -->
   <main class="admin-main">
     <div class="admin-top-bar">
       <div>
         <h1 class="admin-page-title">Events Management</h1>
-        <p style="color: var(--gray-600); margin-top: 0.5rem;">Manage all events, registrations and schedules</p>
+        <p style="color: var(--gray-600); margin-top: 0.5rem; font-family: var(--font-body);">Manage all events, registrations and schedules</p>
       </div>
       <div class="admin-actions">
         <button class="mobile-admin-toggle" onclick="toggleAdminSidebar()">
@@ -246,7 +881,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     
     <!-- Stats Overview -->
-    <div class="admin-stats-grid" style="margin-bottom: 2rem;">
+    <div class="admin-stats-grid">
       <?php
       $statsQuery = "
         SELECT 
@@ -339,7 +974,7 @@ require_once __DIR__ . '/../includes/header.php';
       </button>
     </div>
     
-    <!-- Events Grid -->
+    <!-- Events Card -->
     <div class="admin-card">
       <div class="admin-card-header">
         <h3 class="admin-card-title">
@@ -370,7 +1005,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php if ($event['hero_image']): ?>
                   <img src="<?= ASSETS_PATH ?>images/uploads/<?= htmlspecialchars($event['hero_image']) ?>" alt="Event" class="event-admin-image">
                 <?php else: ?>
-                  <div class="event-admin-image placeholder">
+                  <div class="event-admin-image">
                     <i class="fas fa-calendar-alt"></i>
                   </div>
                 <?php endif; ?>
@@ -460,9 +1095,9 @@ require_once __DIR__ . '/../includes/header.php';
                     <td>
                       <div class="user-cell">
                         <?php if ($event['hero_image']): ?>
-                          <img src="<?= ASSETS_PATH ?>images/uploads/<?= htmlspecialchars($event['hero_image']) ?>" alt="Event" class="user-avatar" style="border-radius: var(--radius-md);">
+                          <img src="<?= ASSETS_PATH ?>images/uploads/<?= htmlspecialchars($event['hero_image']) ?>" alt="Event" class="user-avatar" style="border-radius: 8px;">
                         <?php else: ?>
-                          <div class="user-avatar" style="background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; border-radius: var(--radius-md);">
+                          <div class="user-avatar" style="background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%); color: white; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-calendar"></i>
                           </div>
                         <?php endif; ?>
@@ -473,7 +1108,7 @@ require_once __DIR__ . '/../includes/header.php';
                       </div>
                     </td>
                     <td>
-                      <span style="padding: 0.35rem 0.85rem; background: rgba(45, 156, 219, 0.1); color: #2D9CDB; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700;">
+                      <span style="padding: 0.35rem 0.85rem; background: rgba(45, 156, 219, 0.1); color: #2D9CDB; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;">
                         <i class="fas fa-<?= $event['event_type'] === 'physical' ? 'building' : ($event['event_type'] === 'virtual' ? 'video' : 'globe') ?>"></i>
                         <?= ucfirst($event['event_type']) ?>
                       </span>
@@ -578,7 +1213,10 @@ require_once __DIR__ . '/../includes/header.php';
 
 <script>
 function toggleAdminSidebar() {
-  document.getElementById('adminSidebar').classList.toggle('mobile-visible');
+  const sidebar = document.getElementById('adminSidebar');
+  if (sidebar) {
+    sidebar.classList.toggle('mobile-visible');
+  }
 }
 
 // View Toggle
@@ -678,7 +1316,7 @@ function renderRegistrations(registrations, event) {
   }
   
   let html = `
-    <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--gray-100); border-radius: var(--radius-lg);">
+    <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--gray-100); border-radius: 12px;">
       <h3 style="margin: 0 0 0.5rem 0;">${event.title}</h3>
       <p style="margin: 0; color: var(--gray-600);">
         <strong>${registrations.length}</strong> ${registrations.length === 1 ? 'registration' : 'registrations'}
@@ -690,9 +1328,6 @@ function renderRegistrations(registrations, event) {
       <button class="btn btn-secondary btn-sm" onclick="exportRegistrations(${event.id})">
         <i class="fas fa-download"></i> Export CSV
       </button>
-      <button class="btn btn-outline btn-sm" onclick="emailRegistrants(${event.id})">
-        <i class="fas fa-envelope"></i> Email All
-      </button>
     </div>
     
     <div class="table-wrapper">
@@ -702,7 +1337,6 @@ function renderRegistrations(registrations, event) {
             <th>Name</th>
             <th>Email</th>
             <th>Phone</th>
-            <th>Chapter</th>
             <th>Registered</th>
             <th>Status</th>
           </tr>
@@ -715,14 +1349,12 @@ function renderRegistrations(registrations, event) {
       <tr>
         <td>
           <div style="font-weight: 600; color: var(--dark-bg);">${reg.name}</div>
-          ${reg.dietary_needs ? `<small style="color: var(--gray-600);">Dietary: ${reg.dietary_needs}</small>` : ''}
         </td>
         <td>${reg.email}</td>
         <td>${reg.phone || '-'}</td>
-        <td>${reg.chapter || '-'}</td>
         <td>${new Date(reg.registered_at).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}</td>
         <td>
-          <span class="status-badge ${reg.attendance_confirmed ? 'active' : 'pending'}">
+          <span class="status-badge ${reg.attendance_confirmed ? 'confirmed' : 'pending'}">
             ${reg.attendance_confirmed ? 'Confirmed' : 'Pending'}
           </span>
         </td>
@@ -775,16 +1407,30 @@ async function exportRegistrations(eventId) {
   window.location.href = '<?= SITE_URL ?>/api/admin.php?action=export_registrations&event_id=' + eventId;
 }
 
-async function emailRegistrants(eventId) {
-  const subject = prompt('Email Subject:');
-  if (!subject) return;
-  
-  const message = prompt('Email Message:');
-  if (!message) return;
-  
-  // Implementation for sending email to all registrants
-  alert('Email functionality will be implemented');
+// Initialize AOS
+if (typeof AOS !== 'undefined') {
+  AOS.init({
+    duration: 800,
+    easing: 'ease-in-out',
+    once: true,
+    offset: 100
+  });
 }
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', function(e) {
+  const sidebar = document.getElementById('adminSidebar');
+  const toggle = document.querySelector('.mobile-admin-toggle');
+  
+  if (window.innerWidth <= 768 && 
+      sidebar &&
+      !sidebar.contains(e.target) && 
+      toggle &&
+      !toggle.contains(e.target) &&
+      sidebar.classList.contains('mobile-visible')) {
+    sidebar.classList.remove('mobile-visible');
+  }
+});
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

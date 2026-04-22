@@ -1,8 +1,9 @@
 <?php
 $pageTitle = 'Past Events Management - Admin - Scribes Global';
 $pageDescription = 'Manage past events media';
-$pageCSS = 'admin';
 $noSplash = true;
+$noNav = true;
+$noFooter = true;
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/session.php';
@@ -81,6 +82,349 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <style>
+:root {
+  --primary-purple: #6B46C1;
+  --primary-gold: #D4AF37;
+  --primary-coral: #EB5757;
+  --dark-bg: #1A1A2E;
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--gray-50);
+  font-family: var(--font-body);
+}
+
+.admin-layout {
+  display: flex;
+  background: var(--gray-50);
+  min-height: 100vh;
+}
+
+.admin-main {
+  flex: 1;
+  margin-left: 260px;
+  padding: 2rem;
+  overflow-y: auto;
+  transition: margin var(--transition);
+}
+
+.admin-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-page-title {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--dark-bg);
+  letter-spacing: -0.5px;
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-admin-toggle {
+  display: none;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--dark-bg);
+  font-size: 1.25rem;
+  transition: all var(--transition);
+}
+
+.mobile-admin-toggle:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+/* ─── Stats Grid ────────────────────────────────────────── */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.admin-stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--gray-200);
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, currentColor, transparent);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.admin-stat-card:hover {
+  border-color: currentColor;
+  box-shadow: 0 8px 24px rgba(107, 70, 193, 0.12);
+  transform: translateY(-4px);
+}
+
+.admin-stat-card:hover::before {
+  opacity: 1;
+}
+
+.admin-stat-card.purple { color: var(--primary-purple); }
+.admin-stat-card.gold { color: var(--primary-gold); }
+.admin-stat-card.teal { color: #2D9CDB; }
+.admin-stat-card.coral { color: var(--primary-coral); }
+
+.admin-stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+}
+
+.admin-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: rgba(107, 70, 193, 0.1);
+  color: var(--primary-purple);
+}
+
+.admin-stat-card.gold .admin-stat-icon {
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--primary-gold);
+}
+
+.admin-stat-card.teal .admin-stat-icon {
+  background: rgba(45, 156, 219, 0.1);
+  color: #2D9CDB;
+}
+
+.admin-stat-card.coral .admin-stat-icon {
+  background: rgba(235, 87, 87, 0.1);
+  color: var(--primary-coral);
+}
+
+.admin-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.admin-stat-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+/* ─── Filters ───────────────────────────────────────────── */
+.filters-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-input,
+.filter-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  background: white;
+  transition: all var(--transition);
+}
+
+.search-input {
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+}
+
+.filter-select {
+  min-width: 150px;
+}
+
+/* ─── Admin Card ────────────────────────────────────────── */
+.admin-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition);
+}
+
+.admin-card:hover {
+  border-color: var(--gray-300);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.admin-card-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-card-title i {
+  color: var(--primary-purple);
+}
+
+.admin-card-body {
+  padding: 1.5rem;
+}
+
+/* ─── Table Styles ──────────────────────────────────────── */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+}
+
+.data-table thead {
+  background: var(--gray-50);
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.data-table th {
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-700);
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 0.95rem;
+  color: var(--gray-800);
+}
+
+.data-table tbody tr:hover {
+  background: var(--gray-50);
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--gray-200);
+  flex-shrink: 0;
+}
+
+.user-info h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dark-bg);
+}
+
+.user-info p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--gray-600);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-700);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all var(--transition);
+}
+
+.btn-icon:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+  color: var(--primary-purple);
+}
+
+/* ─── Media Preview ────────────────────────────────────── */
 .media-preview {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
@@ -90,9 +434,10 @@ require_once __DIR__ . '/../../includes/header.php';
 
 .media-preview-item {
   aspect-ratio: 1;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   overflow: hidden;
   position: relative;
+  border: 1px solid var(--gray-200);
 }
 
 .media-preview-item img {
@@ -105,25 +450,206 @@ require_once __DIR__ . '/../../includes/header.php';
   background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%);
   color: white;
   padding: 0.35rem 0.85rem;
-  border-radius: var(--radius-full);
+  border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
 }
+
+/* ─── Pagination ────────────────────────────────────────– */
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--gray-200);
+  flex-wrap: wrap;
+}
+
+.pagination button,
+.pagination span {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-700);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all var(--transition);
+}
+
+.pagination button:hover {
+  background: var(--gray-100);
+  border-color: var(--primary-purple);
+  color: var(--primary-purple);
+}
+
+.pagination button.active {
+  background: var(--primary-purple);
+  color: white;
+  border-color: var(--primary-purple);
+}
+
+.pagination span {
+  cursor: default;
+}
+
+/* ─── Empty State ───────────────────────────────────────– */
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  color: var(--gray-400);
+  margin-bottom: 1rem;
+}
+
+.empty-state-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--gray-700);
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state-text {
+  color: var(--gray-600);
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* ─── Modal ─────────────────────────────────────────────– */
+.admin-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.admin-modal.active {
+  display: flex;
+}
+
+.admin-modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.admin-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.admin-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dark-bg);
+}
+
+.admin-modal-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--gray-200);
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--gray-700);
+  font-size: 1.1rem;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-modal-close:hover {
+  background: var(--gray-100);
+  border-color: var(--primary-purple);
+  color: var(--primary-purple);
+}
+
+.admin-modal-body {
+  padding: 1.5rem;
+}
+
+/* ─── Responsive ────────────────────────────────────────– */
+@media (max-width: 768px) {
+  .admin-main {
+    margin-left: 0;
+    padding: 1.25rem;
+  }
+
+  .mobile-admin-toggle {
+    display: flex;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .admin-page-title {
+    font-size: 1.5rem;
+  }
+
+  .filters-bar {
+    flex-direction: column;
+  }
+
+  .search-input {
+    min-width: 100%;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-stat-value {
+    font-size: 1.5rem;
+  }
+
+  .admin-modal-content {
+    max-height: 95vh;
+  }
+}
 </style>
 
 <div class="admin-layout">
   <!-- Sidebar -->
-  <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+  <?php require_once __DIR__ . '/../includes/sidebar.php'; ?>
   
   <!-- Main Content -->
   <main class="admin-main">
     <div class="admin-top-bar">
       <div>
         <h1 class="admin-page-title">Past Events Management</h1>
-        <p style="color: var(--gray-600); margin-top: 0.5rem;">Add photos and videos to past events</p>
+        <p style="color: var(--gray-600); margin-top: 0.5rem; font-family: var(--font-body); font-size: 0.95rem;">
+          Add photos and videos to past events
+        </p>
       </div>
       <div class="admin-actions">
         <button class="mobile-admin-toggle" onclick="toggleAdminSidebar()">
@@ -248,14 +774,14 @@ require_once __DIR__ . '/../../includes/header.php';
                     <td>
                       <div class="user-cell">
                         <?php if ($event['hero_image']): ?>
-                          <img src="<?= ASSETS_PATH ?>images/uploads/<?= htmlspecialchars($event['hero_image']) ?>" alt="Event" class="user-avatar" style="border-radius: var(--radius-md);">
+                          <img src="<?= ASSETS_PATH ?>images/uploads/<?= htmlspecialchars($event['hero_image']) ?>" alt="Event" class="user-avatar">
                         <?php else: ?>
-                          <div class="user-avatar" style="background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; border-radius: var(--radius-md);">
+                          <div class="user-avatar" style="background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700;">
                             <i class="fas fa-calendar"></i>
                           </div>
                         <?php endif; ?>
                         <div class="user-info">
-                          <h4><?= htmlspecialchars($event['title']) ?></h4>
+                          <h4><?= htmlspecialchars(substr($event['title'], 0, 30)) ?></h4>
                           <p><?= $event['chapter_name'] ?? 'No Chapter' ?></p>
                         </div>
                       </div>
@@ -302,10 +828,10 @@ require_once __DIR__ . '/../../includes/header.php';
                     </td>
                     <td>
                       <div class="action-buttons">
-                        <a href="<?= SITE_URL ?>/pages/events/details?id=<?= $event['id'] ?>" class="btn-icon btn-view" title="View Event" target="_blank">
+                        <a href="<?= SITE_URL ?>/pages/events/details?id=<?= $event['id'] ?>" class="btn-icon" title="View Event" target="_blank">
                           <i class="fas fa-eye"></i>
                         </a>
-                        <button class="btn-icon btn-edit" onclick="openMediaManager(<?= $event['id'] ?>)" title="Manage Media" style="background: rgba(212, 175, 55, 0.1); color: #D4AF37;">
+                        <button class="btn-icon" onclick="openMediaManager(<?= $event['id'] ?>)" title="Manage Media" style="background: rgba(212, 175, 55, 0.1); color: #D4AF37;">
                           <i class="fas fa-photo-video"></i>
                         </button>
                       </div>
@@ -448,12 +974,12 @@ function renderMediaManager(data) {
         <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
           <i class="fas fa-images" style="color: #6B46C1;"></i>
           Event Photos
-          <span style="background: var(--gray-200); color: var(--gray-700); padding: 0.25rem 0.75rem; border-radius: var(--radius-full); font-size: 0.75rem; margin-left: auto;">
+          <span style="background: var(--gray-200); color: var(--gray-700); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; margin-left: auto;">
             ${gallery.length} / 20
           </span>
         </h3>
         
-        <div style="border: 2px dashed var(--gray-300); border-radius: var(--radius-xl); padding: 2rem; text-align: center; background: var(--gray-50); margin-bottom: 1rem; cursor: pointer;" onclick="document.getElementById('galleryUpload').click()">
+        <div style="border: 2px dashed var(--gray-300); border-radius: 12px; padding: 2rem; text-align: center; background: var(--gray-50); margin-bottom: 1rem; cursor: pointer;" onclick="document.getElementById('galleryUpload').click()">
           <i class="fas fa-cloud-upload-alt" style="font-size: 2.5rem; color: var(--gray-400); margin-bottom: 0.5rem;"></i>
           <p style="margin: 0; color: var(--gray-600); font-weight: 600;">Click to upload photos</p>
           <p style="margin: 0.25rem 0 0 0; font-size: 0.75rem; color: var(--gray-500);">Max 20 images, 5MB each</p>
@@ -462,9 +988,9 @@ function renderMediaManager(data) {
         
         <div id="galleryGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; max-height: 400px; overflow-y: auto;">
           ${gallery.map((img, idx) => `
-            <div style="position: relative; aspect-ratio: 1; border-radius: var(--radius-lg); overflow: hidden; border: 2px solid var(--gray-200);">
+            <div style="position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 2px solid var(--gray-200);">
               <img src="<?= ASSETS_PATH ?>images/uploads/${img}" style="width: 100%; height: 100%; object-fit: cover;">
-              <button onclick="deleteGalleryImage(${event.id}, '${img}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(235, 87, 87, 0.9); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+              <button onclick="deleteGalleryImage(${event.id}, '${img}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(235, 87, 87, 0.9); color: white; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -477,13 +1003,13 @@ function renderMediaManager(data) {
         <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
           <i class="fas fa-video" style="color: #EB5757;"></i>
           Event Videos
-          <span style="background: var(--gray-200); color: var(--gray-700); padding: 0.25rem 0.75rem; border-radius: var(--radius-full); font-size: 0.75rem; margin-left: auto;">
+          <span style="background: var(--gray-200); color: var(--gray-700); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; margin-left: auto;">
             ${videos.length} / 10
           </span>
         </h3>
         
         <div style="margin-bottom: 1rem;">
-          <input type="text" id="videoUrl" placeholder="YouTube video URL (e.g., https://www.youtube.com/watch?v=...)" style="width: 100%; padding: 0.875rem; border: 2px solid var(--gray-300); border-radius: var(--radius-lg); font-family: var(--font-primary); margin-bottom: 0.5rem;">
+          <input type="text" id="videoUrl" placeholder="YouTube video URL (e.g., https://www.youtube.com/watch?v=...)" style="width: 100%; padding: 0.875rem; border: 2px solid var(--gray-300); border-radius: 8px; font-family: var(--font-body); margin-bottom: 0.75rem;">
           <button class="btn btn-primary" style="width: 100%;" onclick="addVideo(${event.id})">
             <i class="fas fa-plus"></i> Add Video
           </button>
@@ -494,9 +1020,9 @@ function renderMediaManager(data) {
         
         <div id="videosGrid" style="display: flex; flex-direction: column; gap: 1rem; max-height: 400px; overflow-y: auto;">
           ${videos.map((video, idx) => `
-            <div style="position: relative; border-radius: var(--radius-lg); overflow: hidden; border: 2px solid var(--gray-200);">
+            <div style="position: relative; border-radius: 8px; overflow: hidden; border: 2px solid var(--gray-200);">
               <iframe src="${video}" style="width: 100%; height: 200px; border: none;"></iframe>
-              <button onclick="deleteVideo(${event.id}, '${encodeURIComponent(video)}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(235, 87, 87, 0.9); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); cursor: pointer; font-weight: 700;">
+              <button onclick="deleteVideo(${event.id}, '${encodeURIComponent(video)}')" style="position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(235, 87, 87, 0.9); color: white; border: none; padding: 0.5rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
                 <i class="fas fa-trash"></i> Remove
               </button>
             </div>
@@ -548,7 +1074,7 @@ async function uploadGalleryImages(eventId, files) {
     
     if (result.success) {
       alert('✅ Photos uploaded successfully!');
-      openMediaManager(eventId); // Reload
+      openMediaManager(eventId);
     } else {
       alert('❌ ' + (result.message || 'Failed to upload photos'));
     }
@@ -574,7 +1100,7 @@ async function deleteGalleryImage(eventId, imageName) {
     const result = await response.json();
     
     if (result.success) {
-      openMediaManager(eventId); // Reload
+      openMediaManager(eventId);
     } else {
       alert('❌ ' + (result.message || 'Failed to delete photo'));
     }
@@ -592,10 +1118,8 @@ async function addVideo(eventId) {
     return;
   }
   
-  // Convert YouTube URL to embed format
   let embedUrl = videoUrl;
   
-  // Handle various YouTube URL formats
   if (videoUrl.includes('youtube.com/watch?v=')) {
     const videoId = videoUrl.split('v=')[1].split('&')[0];
     embedUrl = `https://www.youtube.com/embed/${videoId}`;
@@ -621,7 +1145,7 @@ async function addVideo(eventId) {
     
     if (result.success) {
       document.getElementById('videoUrl').value = '';
-      openMediaManager(eventId); // Reload
+      openMediaManager(eventId);
     } else {
       alert('❌ ' + (result.message || 'Failed to add video'));
     }
@@ -647,7 +1171,7 @@ async function deleteVideo(eventId, videoUrl) {
     const result = await response.json();
     
     if (result.success) {
-      openMediaManager(eventId); // Reload
+      openMediaManager(eventId);
     } else {
       alert('❌ ' + (result.message || 'Failed to remove video'));
     }
@@ -656,6 +1180,29 @@ async function deleteVideo(eventId, videoUrl) {
     alert('❌ An error occurred');
   }
 }
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', function(e) {
+  const sidebar = document.getElementById('adminSidebar');
+  const toggle = document.querySelector('.mobile-admin-toggle');
+  
+  if (window.innerWidth <= 768 && 
+      sidebar &&
+      !sidebar.contains(e.target) && 
+      toggle &&
+      !toggle.contains(e.target) &&
+      sidebar.classList.contains('mobile-visible')) {
+    sidebar.classList.remove('mobile-visible');
+  }
+});
+
+// Initialize AOS
+AOS.init({
+  duration: 800,
+  easing: 'ease-in-out',
+  once: true,
+  offset: 100
+});
 </script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

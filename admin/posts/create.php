@@ -1,8 +1,9 @@
 <?php
 $pageTitle = 'Create Post - Admin - Scribes Global';
 $pageDescription = 'Create a new blog post';
-$pageCSS = 'admin';
 $noSplash = true;
+$noNav = true;
+$noFooter = true;
 
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/session.php';
@@ -18,89 +19,221 @@ require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <style>
+/* ════════════════��══════════════════════════════════════════
+   POST EDITOR - MODERN DESIGN
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --primary-purple: #6B46C1;
+  --primary-gold: #D4AF37;
+  --dark-bg: #1A1A2E;
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--gray-50);
+  font-family: var(--font-body);
+}
+
+.admin-layout {
+  display: flex;
+  background: var(--gray-50);
+  min-height: 100vh;
+}
+
+.admin-main {
+  flex: 1;
+  margin-left: 260px;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.admin-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-page-title {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--dark-bg);
+  letter-spacing: -0.5px;
+}
+
+.admin-page-subtitle {
+  color: var(--gray-600);
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  font-family: var(--font-body);
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-admin-toggle {
+  display: none;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--dark-bg);
+  font-size: 1.25rem;
+  transition: all var(--transition);
+}
+
+.mobile-admin-toggle:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+/* ─── Editor Layout ────────────────────────────────────────– */
+.post-editor-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 2rem;
+}
+
 .post-editor {
-  max-width: 900px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
 
 .editor-section {
   background: white;
   padding: 2rem;
-  border-radius: var(--radius-2xl);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  margin-bottom: 2rem;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition);
+}
+
+.editor-section:hover {
+  border-color: var(--gray-300);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .editor-section-title {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--dark-bg);
-  margin-bottom: 1.5rem;
+  margin: 0 0 1.5rem 0;
   padding-bottom: 1rem;
   border-bottom: 2px solid var(--gray-200);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-heading);
 }
 
+.editor-section-title i {
+  color: var(--primary-purple);
+  font-size: 1.1rem;
+}
+
+/* ─── Form Elements ────────────────────────────────────────– */
 .form-group {
   margin-bottom: 1.5rem;
 }
 
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
 .form-label {
   display: block;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--dark-bg);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.625rem;
   font-size: 0.9375rem;
+  font-family: var(--font-body);
+}
+
+.form-label span {
+  color: #EB5757;
+  margin-left: 0.25rem;
 }
 
 .form-control {
   width: 100%;
   padding: 0.875rem 1rem;
-  border: 2px solid var(--gray-300);
-  border-radius: var(--radius-lg);
-  font-family: var(--font-primary);
+  border: 1.5px solid var(--gray-300);
+  border-radius: 8px;
+  font-family: var(--font-body);
   font-size: 0.9375rem;
-  transition: all var(--transition-base);
+  transition: all var(--transition);
+  background: white;
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #6B46C1;
+  border-color: var(--primary-purple);
   box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+  background: rgba(107, 70, 193, 0.02);
 }
 
 textarea.form-control {
   resize: vertical;
   min-height: 120px;
-  font-family: inherit;
+  font-family: var(--font-body);
 }
 
 .content-editor {
   min-height: 400px;
-  border: 2px solid var(--gray-300);
-  border-radius: var(--radius-lg);
+  border: 1.5px solid var(--gray-300);
+  border-radius: 8px;
   padding: 1rem;
-  font-family: var(--font-primary);
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.9375rem;
+  background: white;
+  transition: all var(--transition);
 }
 
 .content-editor:focus {
   outline: none;
-  border-color: #6B46C1;
+  border-color: var(--primary-purple);
   box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
 }
 
+/* ─── Image Upload ────────────────────────────────────────– */
 .image-upload-area {
-  border: 3px dashed var(--gray-300);
-  border-radius: var(--radius-xl);
+  border: 2px dashed var(--gray-300);
+  border-radius: 12px;
   padding: 3rem;
   text-align: center;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all var(--transition);
   background: var(--gray-50);
 }
 
 .image-upload-area:hover {
-  border-color: #6B46C1;
-  background: rgba(107, 70, 193, 0.02);
+  border-color: var(--primary-purple);
+  background: rgba(107, 70, 193, 0.03);
+  transform: translateY(-2px);
 }
 
 .image-upload-area.has-image {
@@ -110,8 +243,10 @@ textarea.form-control {
 
 .image-preview {
   max-width: 100%;
-  border-radius: var(--radius-lg);
+  border-radius: 8px;
   margin-bottom: 1rem;
+  max-height: 300px;
+  object-fit: cover;
 }
 
 .upload-icon {
@@ -120,11 +255,13 @@ textarea.form-control {
   margin-bottom: 1rem;
 }
 
+/* ─── Character Counter ────────────────────────────────────– */
 .char-counter {
-  font-size: 0.875rem;
-  color: var(--gray-500);
+  font-size: 0.8125rem;
+  color: var(--gray-600);
   text-align: right;
   margin-top: 0.5rem;
+  font-weight: 500;
 }
 
 .char-counter.warning {
@@ -133,96 +270,221 @@ textarea.form-control {
 
 .char-counter.danger {
   color: #EB5757;
+  font-weight: 700;
 }
 
+/* ─── Action Buttons ────────────────────────────────────────– */
 .action-buttons {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
-  position: sticky;
-  bottom: 2rem;
-  background: white;
   padding: 1.5rem;
-  border-radius: var(--radius-xl);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
+/* ─── Preview Pane ────────────────────────────────────────– */
 .preview-pane {
   position: sticky;
   top: 2rem;
   background: white;
-  padding: 2rem;
-  border-radius: var(--radius-2xl);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: fit-content;
 }
 
 .preview-title {
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--dark-bg);
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
+  margin: 0;
+  padding-bottom: 0.75rem;
   border-bottom: 2px solid var(--gray-200);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-heading);
+}
+
+.preview-title i {
+  color: var(--primary-purple);
 }
 
 .preview-card {
-  border: 2px solid var(--gray-200);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
   overflow: hidden;
+  background: var(--gray-50);
 }
 
 .preview-image {
   width: 100%;
-  height: 200px;
+  height: 150px;
   background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 3rem;
+  font-size: 2.5rem;
+}
+
+.preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .preview-content {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 .preview-category {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
+  padding: 0.35rem 0.75rem;
   background: rgba(107, 70, 193, 0.1);
-  color: #6B46C1;
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
+  color: var(--primary-purple);
+  border-radius: 6px;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
   margin-bottom: 0.75rem;
 }
 
 .preview-post-title {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: var(--dark-bg);
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem 0;
   line-height: 1.3;
+  font-family: var(--font-heading);
 }
 
 .preview-excerpt {
   color: var(--gray-600);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.6;
+  margin: 0;
+}
+
+.pro-tips {
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.04) 100%);
+  border-radius: 8px;
+  border-left: 3px solid var(--primary-gold);
+}
+
+.pro-tips-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem 0;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--dark-bg);
+}
+
+.pro-tips-title i {
+  color: var(--primary-gold);
+  font-size: 1rem;
+}
+
+.pro-tips-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--gray-700);
+  line-height: 1.8;
+}
+
+.pro-tips-list li {
+  margin-bottom: 0.5rem;
+}
+
+/* ─── Responsive Design ────────────────────────────────────– */
+@media (max-width: 1024px) {
+  .post-editor-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-pane {
+    position: static;
+    order: -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-main {
+    margin-left: 0;
+    padding: 1.25rem;
+  }
+
+  .mobile-admin-toggle {
+    display: flex;
+  }
+
+  .editor-section {
+    padding: 1.5rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-buttons button {
+    width: 100%;
+  }
+
+  .admin-page-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-main {
+    padding: 1rem;
+  }
+
+  .editor-section {
+    padding: 1rem;
+  }
+
+  .editor-section-title {
+    font-size: 1rem;
+  }
+
+  .image-upload-area {
+    padding: 2rem 1rem;
+  }
+
+  .upload-icon {
+    font-size: 2rem;
+  }
+
+  .content-editor {
+    min-height: 250px;
+    font-size: 0.875rem;
+  }
 }
 </style>
 
 <div class="admin-layout">
   <!-- Sidebar -->
-  <?php include __DIR__ . '/../includes/sidebar.php'; ?>
+  <?php require_once __DIR__ . '/../includes/sidebar.php'; ?>
   
   <!-- Main Content -->
   <main class="admin-main">
     <div class="admin-top-bar">
       <div>
         <h1 class="admin-page-title">Create New Post</h1>
-        <p style="color: var(--gray-600); margin-top: 0.5rem;">Share inspiring content with the community</p>
+        <p class="admin-page-subtitle">Share inspiring content with the community</p>
       </div>
       <div class="admin-actions">
         <button class="mobile-admin-toggle" onclick="toggleAdminSidebar()">
@@ -234,11 +496,12 @@ textarea.form-control {
       </div>
     </div>
     
-    <div style="display: grid; grid-template-columns: 1fr 400px; gap: 2rem;">
+    <div class="post-editor-wrapper">
       <!-- Editor -->
       <div class="post-editor">
         <form id="postForm" enctype="multipart/form-data">
-          <!-- Basic Info -->
+          
+          <!-- Basic Info Section -->
           <div class="editor-section" data-aos="fade-up">
             <h2 class="editor-section-title">
               <i class="fas fa-pen"></i> Basic Information
@@ -246,7 +509,7 @@ textarea.form-control {
             
             <div class="form-group">
               <label for="title" class="form-label">
-                Title <span style="color: #EB5757;">*</span>
+                Title <span>*</span>
               </label>
               <input 
                 type="text" 
@@ -263,7 +526,7 @@ textarea.form-control {
             
             <div class="form-group">
               <label for="excerpt" class="form-label">
-                Excerpt <span style="color: #EB5757;">*</span>
+                Excerpt <span>*</span>
               </label>
               <textarea 
                 id="excerpt" 
@@ -281,7 +544,7 @@ textarea.form-control {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div class="form-group">
                 <label for="category" class="form-label">
-                  Category <span style="color: #EB5757;">*</span>
+                  Category <span>*</span>
                 </label>
                 <select id="category" name="category" class="form-control" required onchange="updatePreview()">
                   <option value="">Select category</option>
@@ -298,7 +561,7 @@ textarea.form-control {
               
               <div class="form-group">
                 <label for="status" class="form-label">
-                  Status <span style="color: #EB5757;">*</span>
+                  Status <span>*</span>
                 </label>
                 <select id="status" name="status" class="form-control" required>
                   <option value="draft">Draft</option>
@@ -308,9 +571,7 @@ textarea.form-control {
             </div>
             
             <div class="form-group">
-              <label for="tags" class="form-label">
-                Tags
-              </label>
+              <label for="tags" class="form-label">Tags</label>
               <input 
                 type="text" 
                 id="tags" 
@@ -318,13 +579,13 @@ textarea.form-control {
                 class="form-control" 
                 placeholder="Separate tags with commas (e.g., faith, worship, inspiration)"
               >
-              <small style="color: var(--gray-600); font-size: 0.875rem; display: block; margin-top: 0.5rem;">
+              <small style="color: var(--gray-600); font-size: 0.8125rem; display: block; margin-top: 0.5rem;">
                 <i class="fas fa-info-circle"></i> Tags help readers find related content
               </small>
             </div>
           </div>
           
-          <!-- Featured Image -->
+          <!-- Featured Image Section -->
           <div class="editor-section" data-aos="fade-up" data-aos-delay="100">
             <h2 class="editor-section-title">
               <i class="fas fa-image"></i> Featured Image
@@ -346,14 +607,14 @@ textarea.form-control {
                 <div style="font-weight: 600; color: var(--dark-bg); margin-bottom: 0.5rem;">
                   Click to upload featured image
                 </div>
-                <div style="font-size: 0.875rem; color: var(--gray-600);">
+                <div style="font-size: 0.8125rem; color: var(--gray-600);">
                   JPG, PNG or GIF (Max 5MB)
                 </div>
               </div>
             </div>
           </div>
           
-          <!-- Content -->
+          <!-- Content Section -->
           <div class="editor-section" data-aos="fade-up" data-aos-delay="200">
             <h2 class="editor-section-title">
               <i class="fas fa-align-left"></i> Content
@@ -361,7 +622,7 @@ textarea.form-control {
             
             <div class="form-group">
               <label for="content" class="form-label">
-                Post Content <span style="color: #EB5757;">*</span>
+                Post Content <span>*</span>
               </label>
               <textarea 
                 id="content" 
@@ -377,7 +638,7 @@ You can use:
 Share your message with passion and clarity!"
                 required
               ></textarea>
-              <small style="color: var(--gray-600); font-size: 0.875rem; display: block; margin-top: 0.5rem;">
+              <small style="color: var(--gray-600); font-size: 0.8125rem; display: block; margin-top: 0.5rem;">
                 <i class="fas fa-info-circle"></i> Minimum 100 characters recommended
               </small>
             </div>
@@ -395,11 +656,11 @@ Share your message with passion and clarity!"
         </form>
       </div>
       
-      <!-- Preview -->
+      <!-- Preview Sidebar -->
       <div class="preview-pane" data-aos="fade-left">
-        <div class="preview-title">
+        <h3 class="preview-title">
           <i class="fas fa-eye"></i> Live Preview
-        </div>
+        </h3>
         
         <div class="preview-card">
           <div class="preview-image" id="previewImage">
@@ -413,17 +674,16 @@ Share your message with passion and clarity!"
           </div>
         </div>
         
-        <div style="margin-top: 1.5rem; padding: 1rem; background: var(--gray-100); border-radius: var(--radius-lg);">
-          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-            <i class="fas fa-lightbulb" style="color: #D4AF37;"></i>
-            <strong style="font-size: 0.875rem; color: var(--dark-bg);">Pro Tips</strong>
-          </div>
-          <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.875rem; color: var(--gray-600); line-height: 1.8;">
-            <li>Use a compelling title (40-60 characters is ideal)</li>
-            <li>Write a clear excerpt that hooks readers</li>
+        <div class="pro-tips">
+          <h4 class="pro-tips-title">
+            <i class="fas fa-lightbulb"></i> Pro Tips
+          </h4>
+          <ul class="pro-tips-list">
+            <li>Use a compelling title (40-60 characters)</li>
+            <li>Write a clear, engaging excerpt</li>
             <li>Add a high-quality featured image</li>
             <li>Format content for easy reading</li>
-            <li>Include relevant tags for discoverability</li>
+            <li>Include relevant tags</li>
           </ul>
         </div>
       </div>
@@ -432,89 +692,11 @@ Share your message with passion and clarity!"
 </div>
 
 <script>
-  // Enable detailed error logging
-document.getElementById('postForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  
-  // Validation
-  const title = document.getElementById('title').value.trim();
-  const excerpt = document.getElementById('excerpt').value.trim();
-  const content = document.getElementById('content').value.trim();
-  const category = document.getElementById('category').value;
-  
-  console.log('Form data:', { title, excerpt, content, category }); // Debug log
-  
-  if (!title || !excerpt || !content || !category) {
-    alert('Please fill in all required fields');
-    return;
-  }
-  
-  if (content.length < 100) {
-    alert('Post content should be at least 100 characters');
-    return;
-  }
-  
-  const btn = this.querySelector('button[type="submit"]');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing...';
-  
-  const formData = new FormData(this);
-  
-  // Debug: Log form data
-  console.log('Sending form data...');
-  for (let [key, value] of formData.entries()) {
-    if (value instanceof File) {
-      console.log(key + ':', value.name, value.size + ' bytes');
-    } else {
-      console.log(key + ':', value);
-    }
-  }
-  
-  try {
-    const response = await fetch('<?= SITE_URL ?>/api/blog.php?action=create_post', {
-      method: 'POST',
-      body: formData
-    });
-    
-    console.log('Response status:', response.status); // Debug log
-    
-    const text = await response.text();
-    console.log('Response text:', text); // Debug log
-    
-    let result;
-    try {
-      result = JSON.parse(text);
-    } catch (e) {
-      console.error('JSON parse error:', e);
-      alert('Server error: Invalid response format. Check console for details.');
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      return;
-    }
-    
-    console.log('Parsed result:', result); // Debug log
-    
-    if (result.success) {
-      alert(result.message || 'Post published successfully!');
-      window.location.href = '<?= SITE_URL ?>/admin/posts';
-    } else {
-      alert('Error: ' + (result.message || 'Failed to publish post'));
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-    }
-  } catch (error) {
-    console.error('Fetch error:', error);
-    alert('Network error: ' + error.message);
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-  }
-});
-</script>
-
-<script>
 function toggleAdminSidebar() {
-  document.getElementById('adminSidebar').classList.toggle('mobile-visible');
+  const sidebar = document.getElementById('adminSidebar');
+  if (sidebar) {
+    sidebar.classList.toggle('mobile-visible');
+  }
 }
 
 // Character counter
@@ -571,7 +753,7 @@ function removeImage() {
     <div style="font-weight: 600; color: var(--dark-bg); margin-bottom: 0.5rem;">
       Click to upload featured image
     </div>
-    <div style="font-size: 0.875rem; color: var(--gray-600);">
+    <div style="font-size: 0.8125rem; color: var(--gray-600);">
       JPG, PNG or GIF (Max 5MB)
     </div>
   `;
@@ -590,46 +772,10 @@ function updatePreview() {
   document.getElementById('previewCategory').textContent = category;
 }
 
-// Save draft
-async function saveDraft() {
-  const form = document.getElementById('postForm');
-  const formData = new FormData(form);
-  formData.set('status', 'draft');
-  
-  const btn = event.target;
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-  
-  try {
-    const response = await fetch('<?= SITE_URL ?>/api/blog.php?action=create_post', {
-      method: 'POST',
-      body: formData
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      alert('Draft saved successfully!');
-      window.location.href = '<?= SITE_URL ?>/admin/posts';
-    } else {
-      alert(result.message || 'Failed to save draft');
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    alert('An error occurred');
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-  }
-}
-
-// Submit form
+// Form submission
 document.getElementById('postForm').addEventListener('submit', async function(e) {
   e.preventDefault();
   
-  // Validation
   const title = document.getElementById('title').value.trim();
   const excerpt = document.getElementById('excerpt').value.trim();
   const content = document.getElementById('content').value.trim();
@@ -675,6 +821,74 @@ document.getElementById('postForm').addEventListener('submit', async function(e)
     btn.innerHTML = originalText;
   }
 });
+
+// Save draft
+async function saveDraft() {
+  const form = document.getElementById('postForm');
+  const title = document.getElementById('title').value.trim();
+  const excerpt = document.getElementById('excerpt').value.trim();
+  
+  if (!title || !excerpt) {
+    alert('Please fill in title and excerpt');
+    return;
+  }
+  
+  const formData = new FormData(form);
+  formData.set('status', 'draft');
+  
+  const btn = event.target;
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  
+  try {
+    const response = await fetch('<?= SITE_URL ?>/api/blog.php?action=create_post', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert('Draft saved successfully!');
+      window.location.href = '<?= SITE_URL ?>/admin/posts';
+    } else {
+      alert(result.message || 'Failed to save draft');
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('An error occurred');
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+// Close sidebar on mobile when clicking outside
+document.addEventListener('click', function(e) {
+  const sidebar = document.getElementById('adminSidebar');
+  const toggle = document.querySelector('.mobile-admin-toggle');
+  
+  if (window.innerWidth <= 768 && 
+      sidebar &&
+      !sidebar.contains(e.target) && 
+      toggle &&
+      !toggle.contains(e.target) &&
+      sidebar.classList.contains('mobile-visible')) {
+    sidebar.classList.remove('mobile-visible');
+  }
+});
+
+// Initialize AOS
+if (typeof AOS !== 'undefined') {
+  AOS.init({
+    duration: 800,
+    easing: 'ease-in-out',
+    once: true,
+    offset: 100
+  });
+}
 </script>
 
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

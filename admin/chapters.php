@@ -3,6 +3,8 @@ $pageTitle = 'Chapters Management - Admin - Scribes Global';
 $pageDescription = 'Manage chapters and locations';
 $pageCSS = 'admin';
 $noSplash = true;
+$noNav = true;        // Don't show navigation
+$noFooter = true;     // Don't show footer content
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/session.php';
@@ -98,16 +100,706 @@ $stats = $statsStmt->fetch();
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
+<style>
+:root {
+  --primary-purple: #6B46C1;
+  --primary-gold: #D4AF37;
+  --secondary-gold-light: #F2D97A;
+  --primary-coral: #EB5757;
+  --dark-bg: #1A1A2E;
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--gray-50);
+  font-family: var(--font-body);
+}
+
+.admin-layout {
+  display: flex;
+  background: var(--gray-50);
+  min-height: 100vh;
+}
+
+.admin-main {
+  flex: 1;
+  margin-left: 260px;
+  padding: 2rem;
+  overflow-y: auto;
+  transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-page-title {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--dark-bg);
+  letter-spacing: -0.5px;
+}
+
+.admin-page-subtitle {
+  color: var(--gray-600);
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  font-family: var(--font-body);
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-admin-toggle {
+  display: none;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--dark-bg);
+  font-size: 1.25rem;
+  transition: all var(--transition);
+}
+
+.mobile-admin-toggle:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+/* ─── Stats Grid ──────────────────────────────────────────– */
+.admin-stats-grid {
+  display: grid;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.admin-stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--gray-200);
+  transition: all var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, currentColor, transparent);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.admin-stat-card:hover {
+  border-color: currentColor;
+  box-shadow: 0 8px 24px rgba(107, 70, 193, 0.12);
+  transform: translateY(-4px);
+}
+
+.admin-stat-card:hover::before {
+  opacity: 1;
+}
+
+.admin-stat-card.purple { color: var(--primary-purple); }
+.admin-stat-card.gold { color: var(--primary-gold); }
+.admin-stat-card.teal { color: #2D9CDB; }
+.admin-stat-card.coral { color: var(--primary-coral); }
+
+.admin-stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+}
+
+.admin-stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: rgba(107, 70, 193, 0.1);
+  color: var(--primary-purple);
+}
+
+.admin-stat-card.gold .admin-stat-icon {
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--primary-gold);
+}
+
+.admin-stat-card.teal .admin-stat-icon {
+  background: rgba(45, 156, 219, 0.1);
+  color: #2D9CDB;
+}
+
+.admin-stat-card.coral .admin-stat-icon {
+  background: rgba(235, 87, 87, 0.1);
+  color: var(--primary-coral);
+}
+
+.admin-stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.admin-stat-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-600);
+  font-family: var(--font-body);
+}
+
+.admin-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  background: var(--primary-coral);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ─── Filters Bar ──────────────────────────────────────────– */
+.filters-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-input,
+.filter-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  transition: all var(--transition);
+}
+
+.search-input {
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+}
+
+/* ─── Admin Card ───────────────────────────────────────────– */
+.admin-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition);
+  overflow: hidden;
+}
+
+.admin-card:hover {
+  border-color: var(--gray-300);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.admin-card-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-card-title i {
+  color: var(--primary-purple);
+}
+
+.admin-card-body {
+  padding: 1.5rem;
+}
+
+/* ─── Chapter Grid ─────────────────────────────────────────– */
+.chapter-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  overflow: hidden;
+  transition: all var(--transition);
+  position: relative;
+}
+
+.chapter-card:hover {
+  border-color: var(--primary-purple);
+  box-shadow: 0 8px 24px rgba(107, 70, 193, 0.15);
+  transform: translateY(-4px);
+}
+
+.chapter-card-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%);
+}
+
+.chapter-badge {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background: rgba(45, 156, 219, 0.95);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(10px);
+}
+
+.chapter-requests-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(235, 87, 87, 0.95);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+}
+
+.chapter-content {
+  padding: 1.5rem;
+}
+
+.chapter-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dark-bg);
+  font-family: var(--font-heading);
+  margin-bottom: 1rem;
+}
+
+.chapter-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  color: var(--gray-600);
+  font-size: 0.95rem;
+}
+
+.chapter-meta i {
+  width: 20px;
+  text-align: center;
+  color: var(--primary-purple);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge.active {
+  background: rgba(81, 207, 102, 0.15);
+  color: #51CF66;
+}
+
+.status-badge.inactive {
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--primary-gold);
+}
+
+.chapter-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--gray-200);
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-700);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all var(--transition);
+}
+
+.btn-icon:hover {
+  background: var(--gray-100);
+  border-color: var(--primary-purple);
+  color: var(--primary-purple);
+}
+
+.btn-icon.btn-delete:hover {
+  background: rgba(235, 87, 87, 0.1);
+  border-color: var(--primary-coral);
+  color: var(--primary-coral);
+}
+
+/* ─── Pagination ───────────────────────────────────────────– */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pagination button,
+.pagination span {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--gray-200);
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  transition: all var(--transition);
+}
+
+.pagination button:hover {
+  border-color: var(--primary-purple);
+  color: var(--primary-purple);
+  background: rgba(107, 70, 193, 0.05);
+}
+
+.pagination button.active {
+  background: var(--primary-purple);
+  color: white;
+  border-color: var(--primary-purple);
+}
+
+.pagination span {
+  border: none;
+  background: none;
+  cursor: default;
+  color: var(--gray-400);
+}
+
+/* ─── Empty State ──────────────────────────────────────────– */
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  color: var(--gray-400);
+  margin-bottom: 1rem;
+}
+
+.empty-state-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gray-700);
+  margin: 0;
+}
+
+.empty-state-text {
+  color: var(--gray-600);
+  margin: 0.5rem 0;
+}
+
+/* ─── Modal Styles ─────────────────────────────────────────– */
+.admin-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.admin-modal.active {
+  display: flex;
+}
+
+.admin-modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.admin-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.admin-modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+.admin-modal-close {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--gray-100);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.25rem;
+  color: var(--gray-700);
+  transition: all var(--transition);
+}
+
+.admin-modal-close:hover {
+  background: var(--gray-200);
+  color: var(--dark-bg);
+}
+
+.admin-modal-body {
+  padding: 1.5rem;
+}
+
+/* ─── Form Styles ──────────────────────────────────────────– */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--dark-bg);
+  font-size: 0.95rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  transition: all var(--transition);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+}
+
+textarea.form-control {
+  resize: vertical;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────– */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all var(--transition);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-purple) 0%, #2D9CDB 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(107, 70, 193, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(107, 70, 193, 0.4);
+}
+
+.btn-secondary {
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-200);
+}
+
+.btn-secondary:hover {
+  background: var(--gray-200);
+  border-color: var(--gray-300);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary-purple);
+  border: 2px solid var(--primary-purple);
+}
+
+.btn-outline:hover {
+  background: rgba(107, 70, 193, 0.05);
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+}
+
+/* ─── Responsive Design ────────────────────────────────────– */
+@media (max-width: 768px) {
+  .admin-main {
+    margin-left: 0;
+    padding: 1.25rem;
+  }
+
+  .mobile-admin-toggle {
+    display: flex;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .filters-bar {
+    flex-direction: column;
+  }
+
+  .search-input,
+  .filter-select {
+    width: 100%;
+  }
+
+  .admin-page-title {
+    font-size: 1.5rem;
+  }
+
+  .chapter-actions {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-main {
+    padding: 1rem;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-stat-value {
+    font-size: 1.75rem;
+  }
+
+  .filters-bar {
+    flex-direction: column;
+  }
+
+  .chapter-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-modal-content {
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 12px 12px 0 0;
+  }
+}
+</style>
+
 <div class="admin-layout">
   <!-- Sidebar -->
-  <?php include __DIR__ . '/includes/sidebar.php'; ?>
+  <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
   
   <!-- Main Content -->
   <main class="admin-main">
     <div class="admin-top-bar">
       <div>
         <h1 class="admin-page-title">Chapters Management</h1>
-        <p style="color: var(--gray-600); margin-top: 0.5rem;">Manage chapters, campuses, and join requests</p>
+        <p class="admin-page-subtitle">Manage chapters, campuses, and join requests</p>
       </div>
       <div class="admin-actions">
         <button class="mobile-admin-toggle" onclick="toggleAdminSidebar()">
@@ -207,75 +899,73 @@ require_once __DIR__ . '/../includes/header.php';
         <?php if (count($chapters) > 0): ?>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem;">
             <?php foreach ($chapters as $chapter): ?>
-              <div class="card" style="cursor: pointer; transition: all var(--transition-base); position: relative;" data-aos="fade-up">
+              <div class="chapter-card" data-aos="fade-up">
                 <?php if ($chapter['hero_image']): ?>
                   <img 
                     src="<?= ASSETS_PATH ?>images/uploads/<?= htmlspecialchars($chapter['hero_image']) ?>" 
                     alt="<?= htmlspecialchars($chapter['name']) ?>" 
-                    style="width: 100%; height: 180px; object-fit: cover;"
+                    class="chapter-card-image"
                   >
                 <?php else: ?>
-                  <div style="width: 100%; height: 180px; background: linear-gradient(135deg, #6B46C1 0%, #2D9CDB 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem;">
+                  <div class="chapter-card-image" style="display: flex; align-items: center; justify-content: center; color: white; font-size: 3rem;">
                     <i class="fas fa-<?= $chapter['is_campus'] ? 'university' : 'map-marker-alt' ?>"></i>
                   </div>
                 <?php endif; ?>
                 
                 <?php if ($chapter['is_campus']): ?>
-                  <div style="position: absolute; top: 1rem; left: 1rem; background: rgba(45, 156, 219, 0.95); color: white; padding: 0.5rem 1rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700; backdrop-filter: blur(10px);">
+                  <div class="chapter-badge">
                     <i class="fas fa-university"></i> CAMPUS
                   </div>
                 <?php endif; ?>
                 
                 <?php if ($chapter['pending_requests'] > 0): ?>
-                  <div style="position: absolute; top: 1rem; right: 1rem; background: rgba(235, 87, 87, 0.95); color: white; padding: 0.5rem 1rem; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700; backdrop-filter: blur(10px);">
+                  <div class="chapter-requests-badge">
                     <?= $chapter['pending_requests'] ?> Requests
                   </div>
                 <?php endif; ?>
                 
-                <div style="padding: 1.5rem;">
+                <div class="chapter-content">
                   <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
-                    <h3 style="margin: 0; font-size: 1.25rem; color: var(--dark-bg);">
-                      <?= htmlspecialchars($chapter['name']) ?>
-                    </h3>
+                    <h3 class="chapter-title"><?= htmlspecialchars($chapter['name']) ?></h3>
                     <span class="status-badge <?= $chapter['status'] ?>">
                       <?= ucfirst($chapter['status']) ?>
                     </span>
                   </div>
                   
-                  <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; color: var(--gray-600); font-size: 0.95rem;">
+                  <div class="chapter-meta">
                     <div>
-                      <i class="fas fa-map-marker-alt" style="width: 20px; color: #6B46C1;"></i>
+                      <i class="fas fa-map-marker-alt"></i>
                       <?= htmlspecialchars($chapter['location']) ?>
                     </div>
                     
                     <?php if ($chapter['is_campus'] && $chapter['campus_university']): ?>
                       <div>
-                        <i class="fas fa-university" style="width: 20px; color: #2D9CDB;"></i>
+                        <i class="fas fa-university"></i>
                         <?= htmlspecialchars($chapter['campus_university']) ?>
                       </div>
                     <?php endif; ?>
                     
                     <?php if ($chapter['leader_first_name']): ?>
                       <div>
-                        <i class="fas fa-user-tie" style="width: 20px; color: #D4AF37;"></i>
+                        <i class="fas fa-user-tie"></i>
                         <?= htmlspecialchars($chapter['leader_first_name'] . ' ' . $chapter['leader_last_name']) ?>
                       </div>
                     <?php endif; ?>
                     
                     <div>
-                      <i class="fas fa-users" style="width: 20px; color: #51CF66;"></i>
+                      <i class="fas fa-users"></i>
                       <?= number_format($chapter['member_count']) ?> members
                     </div>
                     
                     <?php if ($chapter['meeting_schedule']): ?>
                       <div>
-                        <i class="fas fa-calendar" style="width: 20px; color: #EB5757;"></i>
+                        <i class="fas fa-calendar"></i>
                         <?= htmlspecialchars($chapter['meeting_schedule']) ?>
                       </div>
                     <?php endif; ?>
                   </div>
                   
-                  <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
+                  <div class="chapter-actions">
                     <button class="btn btn-primary btn-sm" onclick="viewChapter(<?= $chapter['id'] ?>)" title="View Details">
                       <i class="fas fa-eye"></i>
                     </button>
@@ -329,7 +1019,7 @@ require_once __DIR__ . '/../includes/header.php';
               <?php endif; ?>
             </div>
             <?php if (empty($search) && empty($status) && empty($type)): ?>
-              <button class="btn btn-primary" onclick="openCreateChapterModal()">
+              <button class="btn btn-primary" onclick="openCreateChapterModal()" style="margin-top: 1.5rem;">
                 <i class="fas fa-plus"></i> Create First Chapter
               </button>
             <?php endif; ?>
@@ -357,13 +1047,13 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="form-group">
           <label class="form-label">Chapter Type</label>
           <div style="display: flex; gap: 1rem;">
-            <label style="flex: 1; padding: 1rem; border: 2px solid var(--gray-300); border-radius: var(--radius-lg); cursor: pointer; transition: all var(--transition-base);" onclick="toggleChapterType(0)" id="regularTypeLabel">
-              <input type="radio" name="is_campus" value="0" checked style="margin-right: 0.5rem;">
+            <label id="regularTypeLabel" style="flex: 1; padding: 1rem; border: 2px solid var(--gray-300); border-radius: 8px; cursor: pointer; transition: all var(--transition);">
+              <input type="radio" name="is_campus" value="0" checked onchange="toggleChapterType(0)" style="margin-right: 0.5rem;">
               <strong>Regular Chapter</strong>
               <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: var(--gray-600);">City or regional chapter</p>
             </label>
-            <label style="flex: 1; padding: 1rem; border: 2px solid var(--gray-300); border-radius: var(--radius-lg); cursor: pointer; transition: all var(--transition-base);" onclick="toggleChapterType(1)" id="campusTypeLabel">
-              <input type="radio" name="is_campus" value="1" style="margin-right: 0.5rem;">
+            <label id="campusTypeLabel" style="flex: 1; padding: 1rem; border: 2px solid var(--gray-300); border-radius: 8px; cursor: pointer; transition: all var(--transition);">
+              <input type="radio" name="is_campus" value="1" onchange="toggleChapterType(1)" style="margin-right: 0.5rem;">
               <strong>Campus Chapter</strong>
               <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem; color: var(--gray-600);">University or college chapter</p>
             </label>
@@ -605,7 +1295,7 @@ function previewHeroImage(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();
     reader.onload = function(e) {
-      preview.innerHTML = `<img src="${e.target.result}" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: var(--radius-lg);">`;
+      preview.innerHTML = `<img src="${e.target.result}" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px;">`;
     };
     reader.readAsDataURL(input.files[0]);
   }
@@ -617,11 +1307,11 @@ function previewGalleryImages(input) {
   
   if (input.files) {
     Array.from(input.files).forEach((file, index) => {
-      if (index < 10) { // Limit to 10 images
+      if (index < 10) {
         const reader = new FileReader();
         reader.onload = function(e) {
           const div = document.createElement('div');
-          div.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100px; object-fit: cover; border-radius: var(--radius-md);">`;
+          div.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 8px;">`;
           preview.appendChild(div);
         };
         reader.readAsDataURL(file);
@@ -665,7 +1355,6 @@ function goToPage(page) {
   window.location.href = '<?= SITE_URL ?>/admin/chapters?' + params.toString();
 }
 
-// Modal functions
 function openCreateChapterModal() {
   document.getElementById('modalTitle').textContent = 'Create Chapter';
   document.getElementById('chapterForm').reset();
@@ -680,13 +1369,10 @@ function closeChapterModal() {
   document.getElementById('chapterModal').classList.remove('active');
 }
 
-// Will continue with edit, delete and form submission in next response...
-// View Chapter (already exists, but here's the complete version)
 async function viewChapter(chapterId) {
   window.open('<?= SITE_URL ?>/pages/chapters/view?id=' + chapterId, '_blank');
 }
 
-// Edit Chapter
 async function editChapter(chapterId) {
   try {
     const response = await fetch('<?= SITE_URL ?>/api/chapters.php?action=get_chapter&id=' + chapterId);
@@ -709,7 +1395,6 @@ async function editChapter(chapterId) {
       document.getElementById('leader_id').value = chapter.leader_id || '';
       document.getElementById('status').value = chapter.status;
       
-      // Set chapter type
       const isCampus = chapter.is_campus == 1;
       document.querySelector(`input[name="is_campus"][value="${isCampus ? '1' : '0'}"]`).checked = true;
       toggleChapterType(isCampus ? 1 : 0);
@@ -718,22 +1403,20 @@ async function editChapter(chapterId) {
         document.getElementById('campus_university').value = chapter.campus_university || '';
       }
       
-      // Show existing hero image
       if (chapter.hero_image) {
         document.getElementById('heroImagePreview').innerHTML = `
           <div style="position: relative;">
-            <img src="<?= ASSETS_PATH ?>images/uploads/${chapter.hero_image}" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: var(--radius-lg);">
+            <img src="<?= ASSETS_PATH ?>images/uploads/${chapter.hero_image}" style="width: 100%; max-height: 300px; object-fit: cover; border-radius: 8px;">
             <div style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--gray-600);">Current hero image</div>
           </div>
         `;
       }
       
-      // Show existing gallery images
       if (chapter.gallery) {
         const gallery = JSON.parse(chapter.gallery);
         const galleryHTML = gallery.map(img => `
           <div style="position: relative;">
-            <img src="<?= ASSETS_PATH ?>images/uploads/${img}" style="width: 100%; height: 100px; object-fit: cover; border-radius: var(--radius-md);">
+            <img src="<?= ASSETS_PATH ?>images/uploads/${img}" style="width: 100%; height: 100px; object-fit: cover; border-radius: 8px;">
           </div>
         `).join('');
         document.getElementById('galleryPreview').innerHTML = galleryHTML;
@@ -747,7 +1430,6 @@ async function editChapter(chapterId) {
   }
 }
 
-// Form submission
 document.getElementById('chapterForm').addEventListener('submit', async function(e) {
   e.preventDefault();
   
@@ -784,7 +1466,6 @@ document.getElementById('chapterForm').addEventListener('submit', async function
   }
 });
 
-// Delete Chapter
 async function deleteChapter(chapterId, chapterName) {
   if (!confirm(`Are you sure you want to delete "${chapterName}"?\n\nThis will also delete:\n- All join requests for this chapter\n- Chapter from all member profiles\n\nThis action cannot be undone.`)) {
     return;
@@ -813,13 +1494,19 @@ async function deleteChapter(chapterId, chapterName) {
   }
 }
 
-// Close modal on overlay click
 document.querySelectorAll('.admin-modal').forEach(modal => {
   modal.addEventListener('click', function(e) {
     if (e.target === this) {
       this.classList.remove('active');
     }
   });
+});
+
+AOS.init({
+  duration: 800,
+  easing: 'ease-in-out',
+  once: true,
+  offset: 100
 });
 </script>
 

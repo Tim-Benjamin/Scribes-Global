@@ -369,77 +369,143 @@ function handleDeletePost($conn) {
     }
 }
 
+// ✅ UPDATED: No login required for guests
 function handleToggleLike($conn) {
-    if (!isLoggedIn()) {
-        echo json_encode(['success' => false, 'message' => 'Please login to like posts']);
+    $postId = $_POST['post_id'] ?? 0;
+    
+    if (empty($postId)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid post']);
         return;
     }
     
-    $userId = $_SESSION['user_id'];
-    $postId = $_POST['post_id'] ?? 0;
-    
-    try {
-        // Check if already liked
-        $checkStmt = $conn->prepare("SELECT id FROM blog_likes WHERE post_id = ? AND user_id = ?");
-        $checkStmt->execute([$postId, $userId]);
+    // For logged-in users, track by user_id
+    if (isLoggedIn()) {
+        $userId = $_SESSION['user_id'];
         
-        if ($checkStmt->fetch()) {
-            // Unlike
-            $conn->prepare("DELETE FROM blog_likes WHERE post_id = ? AND user_id = ?")->execute([$postId, $userId]);
-            $conn->prepare("UPDATE blog_posts SET likes = likes - 1 WHERE id = ?")->execute([$postId]);
-            $action = 'unliked';
-        } else {
-            // Like
-            $conn->prepare("INSERT INTO blog_likes (post_id, user_id, created_at) VALUES (?, ?, NOW())")->execute([$postId, $userId]);
-            $conn->prepare("UPDATE blog_posts SET likes = likes + 1 WHERE id = ?")->execute([$postId]);
-            $action = 'liked';
+        try {
+            // Check if already liked
+            $checkStmt = $conn->prepare("SELECT id FROM blog_likes WHERE post_id = ? AND user_id = ?");
+            $checkStmt->execute([$postId, $userId]);
+            
+            if ($checkStmt->fetch()) {
+                // Unlike
+                $conn->prepare("DELETE FROM blog_likes WHERE post_id = ? AND user_id = ?")->execute([$postId, $userId]);
+                $conn->prepare("UPDATE blog_posts SET likes = likes - 1 WHERE id = ?")->execute([$postId]);
+                $action = 'unliked';
+            } else {
+                // Like
+                $conn->prepare("INSERT INTO blog_likes (post_id, user_id, created_at) VALUES (?, ?, NOW())")->execute([$postId, $userId]);
+                $conn->prepare("UPDATE blog_posts SET likes = likes + 1 WHERE id = ?")->execute([$postId]);
+                $action = 'liked';
+            }
+            
+            echo json_encode(['success' => true, 'action' => $action]);
+            
+        } catch (PDOException $e) {
+            error_log("Toggle like error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Failed to toggle like']);
+        }
+    } else {
+        // For guests, track using session
+        if (!isset($_SESSION['guest_likes'])) {
+            $_SESSION['guest_likes'] = [];
         }
         
-        echo json_encode(['success' => true, 'action' => $action]);
-        
-    } catch (PDOException $e) {
-        error_log("Toggle like error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Failed to toggle like']);
+        try {
+            if (in_array($postId, $_SESSION['guest_likes'])) {
+                // Unlike
+                $_SESSION['guest_likes'] = array_diff($_SESSION['guest_likes'], [$postId]);
+                $conn->prepare("UPDATE blog_posts SET likes = likes - 1 WHERE id = ?")->execute([$postId]);
+                $action = 'unliked';
+            } else {
+                // Like
+                $_SESSION['guest_likes'][] = $postId;
+                $conn->prepare("UPDATE blog_posts SET likes = likes + 1 WHERE id = ?")->execute([$postId]);
+                $action = 'liked';
+            }
+            
+            echo json_encode(['success' => true, 'action' => $action]);
+            
+        } catch (PDOException $e) {
+            error_log("Toggle like error (guest): " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Failed to toggle like']);
+        }
     }
 }
 
+// ✅ UPDATED: Supports guests and logged-in users
 function handleAddComment($conn) {
-    if (!isLoggedIn()) {
-        echo json_encode(['success' => false, 'message' => 'Please login to comment']);
-        return;
-    }
-    
-    $userId = $_SESSION['user_id'];
     $postId = $_POST['post_id'] ?? 0;
     $content = trim($_POST['content'] ?? '');
     $parentId = $_POST['parent_id'] ?? null;
+    
+    if (empty($postId)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid post']);
+        return;
+    }
     
     if (empty($content)) {
         echo json_encode(['success' => false, 'message' => 'Comment cannot be empty']);
         return;
     }
     
+    // If user is logged in
+    if (isLoggedIn()) {
+        $userId = $_SESSION['user_id'];
+        $guestName = null;
+        $guestEmail = null;
+    } else {
+        // If guest, require name and email
+        $userId = null;
+        $guestName = trim($_POST['guest_name'] ?? '');
+        $guestEmail = trim($_POST['guest_email'] ?? '');
+        
+        if (empty($guestName)) {
+            echo json_encode(['success' => false, 'message' => 'Please provide your name']);
+            return;
+        }
+        
+        if (empty($guestEmail) || !filter_var($guestEmail, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(['success' => false, 'message' => 'Please provide a valid email']);
+            return;
+        }
+    }
+    
     try {
         $stmt = $conn->prepare("
-            INSERT INTO blog_comments (post_id, user_id, parent_id, content, status, created_at)
-            VALUES (?, ?, ?, ?, 'approved', NOW())
+            INSERT INTO blog_comments (post_id, user_id, parent_id, content, guest_name, guest_email, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'approved', NOW())
         ");
         
-        $stmt->execute([$postId, $userId, $parentId, $content]);
+        $result = $stmt->execute([$postId, $userId, $parentId, $content, $guestName, $guestEmail]);
+        
+        if (!$result) {
+            $errorInfo = $stmt->errorInfo();
+            error_log("Comment insert failed: " . implode(', ', $errorInfo));
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . implode(', ', $errorInfo)]);
+            return;
+        }
         
         $commentId = $conn->lastInsertId();
         
-        // Log activity
-        $logStmt = $conn->prepare("
-            INSERT INTO activity_log (user_id, action, entity_type, entity_id, ip_address, user_agent)
-            VALUES (?, 'comment_added', 'blog_comment', ?, ?, ?)
-        ");
-        $logStmt->execute([
-            $userId,
-            $commentId,
-            $_SERVER['REMOTE_ADDR'],
-            $_SERVER['HTTP_USER_AGENT'] ?? ''
-        ]);
+        // Log activity for registered users only
+        if ($userId) {
+            try {
+                $logStmt = $conn->prepare("
+                    INSERT INTO activity_log (user_id, action, entity_type, entity_id, ip_address, user_agent)
+                    VALUES (?, 'comment_added', 'blog_comment', ?, ?, ?)
+                ");
+                $logStmt->execute([
+                    $userId,
+                    $commentId,
+                    $_SERVER['REMOTE_ADDR'],
+                    $_SERVER['HTTP_USER_AGENT'] ?? ''
+                ]);
+            } catch (Exception $e) {
+                error_log("Activity log error: " . $e->getMessage());
+                // Don't fail the comment creation if logging fails
+            }
+        }
         
         echo json_encode([
             'success' => true,
@@ -449,7 +515,7 @@ function handleAddComment($conn) {
         
     } catch (PDOException $e) {
         error_log("Add comment error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Failed to add comment']);
+        echo json_encode(['success' => false, 'message' => 'Failed to add comment: ' . $e->getMessage()]);
     }
 }
 

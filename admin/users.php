@@ -3,6 +3,8 @@ $pageTitle = 'Users Management - Admin - Scribes Global';
 $pageDescription = 'Manage users';
 $pageCSS = 'admin';
 $noSplash = true;
+$noNav = true;        // Don't show navigation
+$noFooter = true;     // Don't show footer content
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/session.php';
@@ -80,18 +82,547 @@ $totalPages = ceil($total / $limit);
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
-<!-- Rest of the file remains the same -->
+<style>
+/* ═══════════════════════════════════════════════════════════
+   ADMIN USERS PAGE - MODERN UI
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --primary-purple: #6B46C1;
+  --primary-gold: #D4AF37;
+  --primary-coral: #EB5757;
+  --dark-bg: #1A1A2E;
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--gray-50);
+  font-family: var(--font-body);
+}
+
+.admin-layout {
+  display: flex;
+  background: var(--gray-50);
+  min-height: 100vh;
+}
+
+.admin-main {
+  flex: 1;
+  margin-left: 260px;
+  padding: 2rem;
+  overflow-y: auto;
+  transition: margin var(--transition);
+}
+
+.admin-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-page-title {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--dark-bg);
+  letter-spacing: -0.5px;
+}
+
+.admin-page-subtitle {
+  color: var(--gray-600);
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  font-family: var(--font-body);
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-admin-toggle {
+  display: none;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--dark-bg);
+  font-size: 1.25rem;
+  transition: all var(--transition);
+}
+
+.mobile-admin-toggle:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+/* ─── Filters Bar ──────────────────────────────────────────– */
+.filters-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-input,
+.filter-select {
+  flex: 1;
+  min-width: 150px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  transition: all var(--transition);
+  background: white;
+}
+
+.search-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+}
+
+.search-input::placeholder {
+  color: var(--gray-400);
+}
+
+/* ─── Admin Cards ──────────────────────────────────────────– */
+.admin-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition);
+}
+
+.admin-card:hover {
+  border-color: var(--gray-300);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.admin-card-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-card-title i {
+  color: var(--primary-purple);
+}
+
+.admin-card-body {
+  padding: 1.5rem;
+}
+
+/* ─── Table Styles ─────────────────────────────────────────– */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+}
+
+.data-table thead {
+  background: var(--gray-50);
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.data-table th {
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-700);
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 0.95rem;
+  color: var(--gray-800);
+}
+
+.data-table tbody tr:hover {
+  background: var(--gray-50);
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--gray-200);
+}
+
+.user-info h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--dark-bg);
+}
+
+.user-info p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--gray-600);
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  background: rgba(107, 70, 193, 0.1);
+  color: var(--primary-purple);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge.active {
+  background: rgba(81, 207, 102, 0.15);
+  color: #51CF66;
+}
+
+.status-badge.suspended {
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--primary-gold);
+}
+
+.status-badge.banned {
+  background: rgba(235, 87, 87, 0.15);
+  color: var(--primary-coral);
+}
+
+/* ─── Action Buttons ───────────────────────────────────────– */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-700);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all var(--transition);
+}
+
+.btn-icon:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+  color: var(--primary-purple);
+}
+
+.btn-icon.btn-delete:hover {
+  color: var(--primary-coral);
+  border-color: var(--primary-coral);
+}
+
+/* ─── Pagination ───────────────────────────────────────────– */
+.pagination {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.pagination button,
+.pagination span {
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--gray-200);
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  transition: all var(--transition);
+  color: var(--gray-700);
+}
+
+.pagination button:hover {
+  background: var(--gray-100);
+  border-color: var(--primary-purple);
+  color: var(--primary-purple);
+}
+
+.pagination button.active {
+  background: var(--primary-purple);
+  border-color: var(--primary-purple);
+  color: white;
+}
+
+.pagination span {
+  cursor: default;
+}
+
+/* ─── Empty State ──────────────────────────────────────────– */
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  color: var(--gray-400);
+  margin-bottom: 1rem;
+}
+
+.empty-state-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gray-700);
+  margin: 0;
+}
+
+.empty-state-text {
+  color: var(--gray-600);
+  margin-top: 0.5rem;
+}
+
+/* ─── Modal Styles ─────────────────────────────────────────– */
+.admin-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.admin-modal.active {
+  display: flex;
+}
+
+.admin-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.admin-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--dark-bg);
+}
+
+.admin-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: var(--gray-600);
+  transition: all var(--transition);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.admin-modal-close:hover {
+  background: var(--gray-100);
+  color: var(--dark-bg);
+}
+
+.admin-modal-body {
+  padding: 1.5rem;
+}
+
+/* ─── Form Styles ──────────────────────────────────────────– */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 700;
+  color: var(--dark-bg);
+  margin-bottom: 0.5rem;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  transition: all var(--transition);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+}
+
+/* ─── Responsive ───────────────────────────────────────────– */
+@media (max-width: 768px) {
+  .admin-main {
+    margin-left: 0;
+    padding: 1.25rem;
+  }
+
+  .mobile-admin-toggle {
+    display: flex;
+  }
+
+  .admin-page-title {
+    font-size: 1.5rem;
+  }
+
+  .filters-bar {
+    flex-direction: column;
+  }
+
+  .search-input,
+  .filter-select {
+    width: 100%;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .btn-icon {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-main {
+    padding: 1rem;
+  }
+
+  .admin-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .admin-modal-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+}
+</style>
 
 <div class="admin-layout">
   <!-- Sidebar -->
-  <?php include __DIR__ . '/includes/sidebar.php'; ?>
+  <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
   
   <!-- Main Content -->
   <main class="admin-main">
     <div class="admin-top-bar">
       <div>
         <h1 class="admin-page-title">Users Management</h1>
-        <p style="color: var(--gray-600); margin-top: 0.5rem;">Manage all users and their roles</p>
+        <p class="admin-page-subtitle">Manage all users and their roles</p>
       </div>
       <div class="admin-actions">
         <button class="mobile-admin-toggle" onclick="toggleAdminSidebar()">
@@ -361,14 +892,14 @@ async function viewUser(userId) {
     const result = await response.json();
     
     if (result.success) {
-      // Render user details (you'll need to create this template)
+      // Render user details
       body.innerHTML = renderUserDetails(result.user);
     } else {
       body.innerHTML = '<p style="text-align: center; color: var(--gray-600);">Failed to load user details</p>';
     }
   } catch (error) {
     console.error('Error:', error);
-    body.innerHTML = '<p style="text-align: center; color: var(--primary-coral);">An error occurred</p>';
+    body.innerHTML = '<p style="text-align: center; color: #EB5757;">An error occurred</p>';
   }
 }
 
@@ -454,6 +985,29 @@ document.getElementById('notificationForm').addEventListener('submit', async fun
     btn.disabled = false;
     btn.innerHTML = originalText;
   }
+});
+
+// Close sidebar on mobile when clicking outside
+document.addEventListener('click', function(e) {
+  const sidebar = document.getElementById('adminSidebar');
+  const toggle = document.querySelector('.mobile-admin-toggle');
+  
+  if (window.innerWidth <= 768 && 
+      sidebar &&
+      !sidebar.contains(e.target) && 
+      toggle &&
+      !toggle.contains(e.target) &&
+      sidebar.classList.contains('mobile-visible')) {
+    sidebar.classList.remove('mobile-visible');
+  }
+});
+
+// Initialize AOS
+AOS.init({
+    duration: 800,
+    easing: 'ease-in-out',
+    once: true,
+    offset: 100
 });
 </script>
 

@@ -3,6 +3,8 @@ $pageTitle = 'Booking Requests - Admin - Scribes Global';
 $pageDescription = 'Manage booking requests';
 $pageCSS = 'admin';
 $noSplash = true;
+$noNav = true;        // Don't show navigation
+$noFooter = true;     // Don't show footer content
 
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/session.php';
@@ -14,6 +16,7 @@ if (!isAdmin()) {
     exit;
 }
 
+$user = getCurrentUser();
 $db = new Database();
 $conn = $db->connect();
 
@@ -65,12 +68,409 @@ $totalPages = ceil($total / $limit);
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
+<style>
+/* ═══════════════════════════════════════════════════════════
+   ADMIN BOOKINGS PAGE - MODERN UI
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --primary-purple: #6B46C1;
+  --primary-gold: #D4AF37;
+  --primary-coral: #EB5757;
+  --dark-bg: #1A1A2E;
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --font-heading: 'Fraunces', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--gray-50);
+  font-family: var(--font-body);
+}
+
+/* ─── Admin Layout ──────────────────────────────────────── */
+.admin-layout {
+  display: flex;
+  background: var(--gray-50);
+  min-height: 100vh;
+}
+
+/* ─── Main Content Area ────────────────────────────────– */
+.admin-main {
+  flex: 1;
+  margin-left: 260px;
+  padding: 2rem;
+  overflow-y: auto;
+  transition: margin var(--transition);
+}
+
+.admin-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.admin-page-title {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--dark-bg);
+  letter-spacing: -0.5px;
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-admin-toggle {
+  display: none;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--dark-bg);
+  font-size: 1.25rem;
+  transition: all var(--transition);
+}
+
+.mobile-admin-toggle:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+}
+
+/* ─── Filters Bar ──────────────────────────────────────────– */
+.filters-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: white;
+  color: var(--gray-700);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.filter-select:hover {
+  border-color: var(--gray-300);
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary-purple);
+  box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+}
+
+/* ─── Admin Cards ──────────────────────────────────────– */
+.admin-card {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all var(--transition);
+}
+
+.admin-card:hover {
+  border-color: var(--gray-300);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.admin-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.admin-card-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--dark-bg);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-card-title i {
+  color: var(--primary-purple);
+}
+
+.admin-card-body {
+  padding: 1.5rem;
+}
+
+/* ─── Table Styles ─────────────────────────────────────– */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+}
+
+.data-table thead {
+  background: var(--gray-50);
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.data-table th {
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-700);
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 0.95rem;
+  color: var(--gray-800);
+}
+
+.data-table tbody tr:hover {
+  background: var(--gray-50);
+}
+
+/* ─── Status Badge ──────────────────────────────────────– */
+.status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-badge.pending {
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--primary-gold);
+}
+
+.status-badge.approved {
+  background: rgba(45, 156, 219, 0.15);
+  color: #2D9CDB;
+}
+
+.status-badge.confirmed {
+  background: rgba(81, 207, 102, 0.15);
+  color: #51CF66;
+}
+
+.status-badge.rejected {
+  background: rgba(235, 87, 87, 0.15);
+  color: var(--primary-coral);
+}
+
+/* ─── Action Buttons ────────────────────────────────────– */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--gray-200);
+  background: white;
+  color: var(--gray-700);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  transition: all var(--transition);
+}
+
+.btn-icon:hover {
+  background: var(--gray-100);
+  border-color: var(--gray-300);
+  color: var(--primary-purple);
+}
+
+.btn-icon.btn-view:hover {
+  background: rgba(107, 70, 193, 0.1);
+  border-color: var(--primary-purple);
+  color: var(--primary-purple);
+}
+
+.btn-icon.btn-edit:hover {
+  background: rgba(81, 207, 102, 0.1);
+  border-color: #51CF66;
+  color: #51CF66;
+}
+
+/* ─── Pagination ────────────────────────────────────────– */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.pagination button,
+.pagination span {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--gray-200);
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  transition: all var(--transition);
+  font-family: var(--font-body);
+}
+
+.pagination button:hover:not(.active) {
+  border-color: var(--primary-purple);
+  color: var(--primary-purple);
+}
+
+.pagination button.active {
+  background: var(--primary-purple);
+  color: white;
+  border-color: var(--primary-purple);
+}
+
+.pagination span {
+  border: none;
+  cursor: default;
+}
+
+/* ─── Empty State ──────────────────────────────────────– */
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  color: var(--gray-400);
+  margin-bottom: 1rem;
+}
+
+.empty-state-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gray-700);
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state-text {
+  color: var(--gray-600);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* ─── Responsive Design ────────────────────────────────– */
+@media (max-width: 768px) {
+  .admin-main {
+    margin-left: 0;
+    padding: 1.25rem;
+  }
+
+  .mobile-admin-toggle {
+    display: flex;
+  }
+
+  .admin-page-title {
+    font-size: 1.5rem;
+  }
+
+  .filters-bar {
+    flex-direction: column;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+
+  .data-table {
+    font-size: 0.85rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.75rem 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-main {
+    padding: 1rem;
+  }
+
+  .admin-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .admin-card-body {
+    padding: 1rem;
+  }
+
+  .table-wrapper {
+    font-size: 0.8rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.5rem;
+  }
+
+  .action-buttons {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>
+
 <div class="admin-layout">
-  <!-- Sidebar -->
-  <?php include __DIR__ . '/includes/sidebar.php'; ?>
+  <!-- Include Sidebar from admin/includes/sidebar.php -->
+  <?php require_once __DIR__ . '/includes/sidebar.php'; ?>
   
-  <!-- Main Content -->
-  <main class="admin-main">
+  <!-- Admin Main Content -->
+  <main class="admin-main" id="adminMain">
     <div class="admin-top-bar">
       <div>
         <h1 class="admin-page-title">Booking Requests</h1>
@@ -110,7 +510,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
     
     <!-- Bookings Table -->
-    <div class="admin-card">
+    <div class="admin-card" data-aos="fade-up">
       <div class="admin-card-header">
         <h3 class="admin-card-title">
           <i class="fas fa-calendar-check"></i>
@@ -259,6 +659,29 @@ function approveBooking(id) {
   // Add approval logic here
   alert('Booking approval functionality will be implemented');
 }
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', function(e) {
+  const sidebar = document.getElementById('adminSidebar');
+  const toggle = document.querySelector('.mobile-admin-toggle');
+  
+  if (window.innerWidth <= 768 && 
+      sidebar &&
+      !sidebar.contains(e.target) && 
+      toggle &&
+      !toggle.contains(e.target) &&
+      sidebar.classList.contains('mobile-visible')) {
+    sidebar.classList.remove('mobile-visible');
+  }
+});
+
+// Initialize AOS
+AOS.init({
+    duration: 800,
+    easing: 'ease-in-out',
+    once: true,
+    offset: 100
+});
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
